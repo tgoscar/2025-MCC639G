@@ -4,7 +4,7 @@ using namespace std;
 
 // 1. Ernesto Cuadros-Vargas
 // 2. Luis Antonio Selis Vasquez
-// 3.
+// 3. Oscar Toledo
 // 4.
 // 5.
 
