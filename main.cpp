@@ -6,7 +6,7 @@ using namespace std;
 // 2. Luis Antonio Selis Vasquez
 // 3. Alex Segura
 // 4. Juan Felix Arias Ramos
-// 5.
+// 5. Oscar Toledo Guerrero
 // 
 int main(){
     cout << "Hello EDA - MCC639G" <<endl;
