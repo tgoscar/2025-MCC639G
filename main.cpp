@@ -8,6 +8,7 @@ using namespace std;
 // 3. Alex Segura
 // 4. Juan Felix Arias Ramos
 // 5. Oscar Toledo Guerrero
+// 6. Aldo Arriola
 // 7. Jose Bazan
 
 // Forma 1 de Compilar: 
