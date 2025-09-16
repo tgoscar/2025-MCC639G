@@ -3,7 +3,7 @@
 #include "util.h"
 #include "clasestemplate.h"
 #include "linkedlist.h"
-
+#include "pointers.h"
 using namespace std;
 
 // 1. Ernesto Cuadros-Vargas
@@ -24,8 +24,10 @@ using namespace std;
 int main(){
     cout << "Hello EDA - MCC639G" <<endl;
     // DemoTest();
+    // DemoUtil();
+    // DemoClasesTemplate();
+
+    DemoBasicPointers();
     DemoLinkedList();
-    DemoUtil();
-    DemoClasesTemplate();
     return 0;
 }

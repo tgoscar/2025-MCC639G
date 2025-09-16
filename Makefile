@@ -1,11 +1,12 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g -pthread # Añadido -pthread
+CXXFLAGS = -std=c++17 -Wall -Wunused-value -g -pthread # Añadido -pthread
 LDFLAGS = -pthread # Añadido -pthread
 
 TARGET = main
 SRCS = main.cpp \
 	   test.cpp  util.cpp \
 	   clasestemplate.cpp \
+	   pointers.cpp \
 	   linkedlist.cpp
 OBJS = $(SRCS:.cpp=.o)
 
