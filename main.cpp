@@ -7,7 +7,11 @@ using namespace std;
 // 2. Luis Antonio Selis Vasquez
 // 3. Alex Segura
 // 4. Juan Felix Arias Ramos
-// 5. Oscar Toledo Guerrero
+// 5. Oscar Toledo
+// 6. Richard Villanueva Retamozo
+// 7. José Bazán
+// 8. Aldo Arriola
+// 9. David Quispe
 
 // Forma 1 de Compilar: 
 // g++ -std=c++17 -Wall -g -pthread -o main main.cpp test.cpp
