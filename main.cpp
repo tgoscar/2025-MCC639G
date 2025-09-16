@@ -1,5 +1,8 @@
 #include <iostream>
 #include "test.h"
+#include "util.h"
+#include "clasestemplate.h"
+#include "linkedlist.h"
 
 using namespace std;
 
@@ -7,7 +10,7 @@ using namespace std;
 // 2. Luis Antonio Selis Vasquez
 // 3. Alex Segura
 // 4. Juan Felix Arias Ramos
-// 5. Oscar Toledo
+// 5. Oscar Toledo Guerrero
 // 6. Richard Villanueva Retamozo
 // 7. José Bazán
 // 8. Aldo Arriola
@@ -20,8 +23,9 @@ using namespace std;
 
 int main(){
     cout << "Hello EDA - MCC639G" <<endl;
-    int t = prueba(5);
-    cout << "Respuesta:" << t << endl;
-
+    // DemoTest();
+    DemoLinkedList();
+    DemoUtil();
+    DemoClasesTemplate();
     return 0;
 }
