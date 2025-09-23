@@ -6,56 +6,97 @@
 template <typename T>
 class LLNode{
 private:
-    using    Type = T;
+    using    value_type = T;
     using    Node = LLNode<T>;
-    Type     m_data;
+    using    MySelf=LLNode<T>;
+    value_type     m_data;
     Ref      m_ref;
     Node    *m_pNext = nullptr;
 
 public:
-    LLNode(Type &elem, Ref ref, LLNode<T> *pNext = nullptr)
-        : m_data(elem), m_pNext(pNext){
+    LLNode(value_type &elem, Ref ref, LLNode<value_type> *pNext = nullptr)
+        : m_data(elem), m_ref(ref), m_pNext(pNext){
     }
-    Type   GetData()    { return m_data;     }
-    Type  &GetDataRef() { return m_data;     }
+    value_type   GetData()    { return m_data;     }
+    value_type  &GetDataRef() { return m_data;     }
+    Ref    GetRef()     { return m_ref;      }
     Node * GetNext()    { return m_pNext;    }
     Node *&GetNextRef() { return m_pNext;    }
 };
 
+// TODO Activar el iterator
+template <typename T>
+class forward_linkedlist_iterator{
+// private:
+//     using value_type = T;
+//     using Node       = LLNode<T>;
+//     using iterator   = forward_linkedlist_iterator<T>;
+//     using Container  = class CLinkedList<T>;
+
+//     Container *m_pList = nullptr;
+//     Node      *m_pNode = nullptr;
+// public:
+//     forward_linkedlist_iterator(Container *pList, Node *pNode)
+//             : m_pList(pList), m_pNode(pNode){}
+//     forward_linkedlist_iterator(forward_linkedlist_iterator<T> &other)
+//             : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
+//     bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
+//     bool operator!=(iterator other){ return !(*this == other);    }
+
+//     iterator operator++(){ 
+//         if(m_pNode)
+//             m_pNode = m_pNode->GetNext();
+//         return *this;
+//     }
+//     value_type &operator*(){    return m_pNode->GetDataRef();   }
+};
+
+// TODO Agregar control de concurrencia
 template <typename T>
 class CLinkedList{
 private:
-    using Type = T; 
-    using Node = LLNode<Type>; 
+    using value_type = T; 
+    using Node       = LLNode<value_type>; 
+    using iterator   = forward_linkedlist_iterator<T>;
+
     Node *m_pRoot = nullptr;
+
 public:
     // Constructor
     CLinkedList();
-    // TODO: Constructor Copia
     CLinkedList(CLinkedList &other);
 
-    // TODO: Move contructor
+    // TODO: Move contructor (leer bibliografia)
     CLinkedList(CLinkedList &&other);
 
     // Destructor seguro
     virtual ~CLinkedList();
 
-    void Insert(Type &elem, Ref ref);
+    void Insert(value_type &elem, Ref ref);
 private:
-    // TODO: Implementar
-    void InternalInsert(Node *&rParent, Type &elem, Ref ref);
+    void InternalInsert(Node *&rParent, value_type &elem, Ref ref);
     Node *GetRoot()    {    return m_pRoot;     };
 
-    friend std::ostream& operator<<(std::ostream &os, CLinkedList<T> &obj);
+    // iterator begin(){ return forward_linkedlist_iterator(this, m_pRoot); };
+    // iterator end()  { return forward_linkedlist_iterator(this, nullptr); } 
+
+    friend std::ostream& operator<<(std::ostream &os, CLinkedList<T> &obj){
+        auto pRoot = obj.GetRoot();
+        while( pRoot ){
+            os << pRoot->GetData() << "(" << pRoot->GetRef() << ") ";
+            pRoot = pRoot->GetNext();
+        }
+        return os;
+    }
 };
 
 template <typename T>
-void CLinkedList<T>::Insert(Type &elem, Ref ref){
+void CLinkedList<T>::Insert(value_type &elem, Ref ref){
     InternalInsert(m_pRoot, elem, ref);
 }
 
 template <typename T>
-void CLinkedList<T>::InternalInsert(Node *&rParent, Type &elem, Ref ref){
+void CLinkedList<T>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
     if( !rParent || elem < rParent->GetDataRef() ){
         rParent = new Node(elem, ref, rParent);
         return;
@@ -69,6 +110,7 @@ CLinkedList<T>::CLinkedList()
 {
 }
 
+// TODO Constructor por copia
 template <typename T>
 CLinkedList<T>::CLinkedList(CLinkedList &other)
 {
@@ -84,6 +126,7 @@ CLinkedList<T>::~CLinkedList()
 {
 }
 
+// TODO: Este operador debe quedar fuera de a clase
 template <typename T>
 std::ostream &operator<<(std::ostream &os, CLinkedList<T> &obj){
     auto pRoot = obj.GetRoot();

@@ -1,9 +1,8 @@
 #include <iostream>
 #include "pointers.h"
+#include "util.h"
 using namespace std;
 
-template <typename T>
-void Print(T &n){   cout << "val: " << n << endl; }
 
 // int by value
 void f1(int n) { n++;    }

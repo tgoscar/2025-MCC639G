@@ -12,4 +12,7 @@ void intercambio(T &a, T &b){
     b = tmp;
 }
 
+template <typename T>
+void Print(T &n){   cout << n << " "; }
+
 #endif

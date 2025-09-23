@@ -4,6 +4,8 @@
 #include "clasestemplate.h"
 #include "linkedlist.h"
 #include "pointers.h"
+#include "vector.h"
+
 using namespace std;
 
 // 1. Ernesto Cuadros-Vargas
@@ -27,7 +29,9 @@ int main(){
     // DemoUtil();
     // DemoClasesTemplate();
     // DemoBasicPointers();
-    
-    DemoLinkedList();
+
+    // DemoLinkedList();
+    DemoVector();
+
     return 0;
 }
