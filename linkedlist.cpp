@@ -7,11 +7,12 @@ void DemoLinkedList(){
     l1.Insert(x, 3);
     x = 7;
     l1.Insert(x, 14);
-    // std::cout << x;
-    // std::cout << l1;
+    // l1 += 5;
+    std::cout << x;
+    std::cout << l1 << x << "hola";
 
     CLinkedList<float> l2;
     float f = 3.14;
     l2.Insert(f, 10.5);
-    // std::cout << l2;
+    std::cout << l2;
 }

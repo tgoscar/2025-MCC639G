@@ -1,5 +1,6 @@
 #ifndef __LINKEDLIST_H__
 #define __LINKEDLIST_H__
+#include <iostream>
 #include "types.h"
 
 template <typename T>
@@ -26,7 +27,7 @@ class CLinkedList{
 private:
     using Type = T; 
     using Node = typename LLNode<Type>  ; 
-    // Node<Type> *m_pHead = nullptr;
+    Node *m_pHead = nullptr;
 public:
     // Constructor
     CLinkedList();
@@ -43,6 +44,9 @@ public:
 private:
     // TODO: Implementar
     void InternalInsert(Node *&rParent, Type &elem, Ref ref);
+    Node *GetRoot()    {    return m_pRoot;     };
+
+    friend (...) operator<<(ostream &os, CLinkedList<T> &obj);
 };
 
 template <typename T>
@@ -80,6 +84,13 @@ CLinkedList<T>::~CLinkedList()
 {
 }
 
+template <typename T>
+std::ostream &operator<<(std::ostream &os, CLinkedList<T> &obj){
+    auto pRoot = obj.GetRoot();
+    while( pRoot )
+        os << pRoot->GetData() << " ";
+    return os;
+}
 
 void DemoLinkedList();
 
