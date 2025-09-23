@@ -26,8 +26,8 @@ int main(){
     // DemoTest();
     // DemoUtil();
     // DemoClasesTemplate();
-
-    DemoBasicPointers();
+    // DemoBasicPointers();
+    
     DemoLinkedList();
     return 0;
 }

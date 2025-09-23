@@ -27,7 +27,7 @@ class CLinkedList{
 private:
     using Type = T; 
     using Node = typename LLNode<Type>  ; 
-    Node *m_pHead = nullptr;
+    Node *m_pRoot = nullptr;
 public:
     // Constructor
     CLinkedList();
@@ -46,12 +46,12 @@ private:
     void InternalInsert(Node *&rParent, Type &elem, Ref ref);
     Node *GetRoot()    {    return m_pRoot;     };
 
-    friend (...) operator<<(ostream &os, CLinkedList<T> &obj);
+    friend std::ostream& operator<<(std::ostream &os, CLinkedList<T> &obj);
 };
 
 template <typename T>
 void CLinkedList<T>::Insert(Type &elem, Ref ref){
-    InternalInsert(m_pHead, elem, ref);
+    InternalInsert(m_pRoot, elem, ref);
 }
 
 template <typename T>
