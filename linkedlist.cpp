@@ -13,6 +13,6 @@ void DemoLinkedList(){
 
     CLinkedList<float> l2;
     float f = 3.14;
-    l2.Insert(f, 10.5);
+    l2.Insert(f, 17);
     std::cout << l2;
 }

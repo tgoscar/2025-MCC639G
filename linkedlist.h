@@ -7,7 +7,7 @@ template <typename T>
 class LLNode{
 private:
     using    Type = T;
-    using    Node = typename LLNode<T>;
+    using    Node = LLNode<T>;
     Type     m_data;
     Ref      m_ref;
     Node    *m_pNext = nullptr;
@@ -26,7 +26,7 @@ template <typename T>
 class CLinkedList{
 private:
     using Type = T; 
-    using Node = typename LLNode<Type>  ; 
+    using Node = LLNode<Type>; 
     Node *m_pRoot = nullptr;
 public:
     // Constructor
