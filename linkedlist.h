@@ -52,6 +52,8 @@ class forward_linkedlist_iterator{
 };
 
 // TODO Agregar control de concurrencia
+
+// TODO Agregar qeu sea ascendente o descendente con ell mismo codigo
 template <typename T>
 class CLinkedList{
 private:
