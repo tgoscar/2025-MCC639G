@@ -3,18 +3,18 @@
 #include <iostream>
 #include "types.h"
 
-template <typename T>
+template <typename Traits>
 class LLNode{
 private:
-    using    value_type = T;
-    using    Node = LLNode<T>;
-    using    MySelf=LLNode<T>;
+    using    value_type = Traits::T;
+    using    Node = LLNode<Traits>;
+    using    MySelf=LLNode<Traits>;
     value_type     m_data;
     Ref      m_ref;
     Node    *m_pNext = nullptr;
 
 public:
-    LLNode(value_type &elem, Ref ref, LLNode<value_type> *pNext = nullptr)
+    LLNode(value_type &elem, Ref ref, LLNode<Traits> *pNext = nullptr)
         : m_data(elem), m_ref(ref), m_pNext(pNext){
     }
     value_type   GetData()    { return m_data;     }
@@ -25,20 +25,20 @@ public:
 };
 
 // TODO Activar el iterator
-template <typename T>
+template <typename Traits>
 class forward_linkedlist_iterator{
  private:
-     using value_type = T;
-     using Node       = LLNode<T>;
-     using iterator   = forward_linkedlist_iterator<T>;
-     using Container  = class CLinkedList<T>;
+     using value_type = Traits::T;
+     using Node       = LLNode<Traits>;
+     using iterator   = forward_linkedlist_iterator<Traits>;
+     using Container  = class CLinkedList<Traits>;
 
      Container *m_pList = nullptr;
      Node      *m_pNode = nullptr;
  public:
      forward_linkedlist_iterator(Container *pList, Node *pNode)
              : m_pList(pList), m_pNode(pNode){}
-     forward_linkedlist_iterator(forward_linkedlist_iterator<T> &other)
+     forward_linkedlist_iterator(forward_linkedlist_iterator<Traits> &other)
              : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
      bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
      bool operator!=(iterator other){ return !(*this == other);    }
@@ -54,14 +54,17 @@ class forward_linkedlist_iterator{
 // TODO Agregar control de concurrencia
 
 // TODO Agregar que sea ascendente o descendente con el mismo codigo
-template <typename T>
+template <typename Traits>
 class CLinkedList{
 private:
-    using value_type = T; 
-    using Node       = LLNode<value_type>; 
-    using iterator   = forward_linkedlist_iterator<T>;
+    using value_type = typename Traits::value_type; 
+    using Func       = Traits::Func;
+    using Node       = LLNode<Traits>; 
+    using iterator   = forward_linkedlist_iterator<Traits>;
 
-    Node *m_pRoot = nullptr;
+    Node   *m_pRoot = nullptr;
+    size_t  m_nElem = 0;
+    Func m_fCompare;
 
 public:
     // Constructor
@@ -99,7 +102,7 @@ void CLinkedList<T>::Insert(value_type &elem, Ref ref){
 
 template <typename T>
 void CLinkedList<T>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
-    if( !rParent || elem < rParent->GetDataRef() ){
+    if( !rParent || m_fCompare(elem, rParent->GetDataRef()) ){
         rParent = new Node(elem, ref, rParent);
         return;
     }
@@ -108,19 +111,20 @@ void CLinkedList<T>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
 }
 
 template <typename T>
-CLinkedList<T>::CLinkedList()
-{
-}
+CLinkedList<T>::CLinkedList(){}
 
 // TODO Constructor por copia
+//      Hacer loop copiando cada elemento
 template <typename T>
-CLinkedList<T>::CLinkedList(CLinkedList &other)
-{
+CLinkedList<T>::CLinkedList(CLinkedList &other){
 }
 
+// Move Constructor
 template <typename T>
-CLinkedList<T>::CLinkedList(CLinkedList &&other)
-{
+CLinkedList<T>::CLinkedList(CLinkedList &&other){
+    m_pRoot    = std:move(other.m_pRoot);
+    m_nElem    = std:move(other.m_nElem);
+    m_fCompare = std:move(other.m_fCompare);
 }
 
 template <typename T>
