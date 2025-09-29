@@ -95,13 +95,13 @@ private:
     }
 };
 
-template <typename T>
-void CLinkedList<T>::Insert(value_type &elem, Ref ref){
+template <typename Traits>
+void CLinkedList<Traits>::Insert(value_type &elem, Ref ref){
     InternalInsert(m_pRoot, elem, ref);
 }
 
-template <typename T>
-void CLinkedList<T>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
+template <typename Traits>
+void CLinkedList<Traits>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
     if( !rParent || m_fCompare(elem, rParent->GetDataRef()) ){
         rParent = new Node(elem, ref, rParent);
         return;
@@ -110,31 +110,31 @@ void CLinkedList<T>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
     InternalInsert(rParent->GetNextRef(), elem, ref);
 }
 
-template <typename T>
-CLinkedList<T>::CLinkedList(){}
+template <typename Traits>
+CLinkedList<Traits>::CLinkedList(){}
 
 // TODO Constructor por copia
 //      Hacer loop copiando cada elemento
-template <typename T>
-CLinkedList<T>::CLinkedList(CLinkedList &other){
+template <typename Traits>
+CLinkedList<Traits>::CLinkedList(CLinkedList &other){
 }
 
 // Move Constructor
-template <typename T>
-CLinkedList<T>::CLinkedList(CLinkedList &&other){
+template <typename Traits>
+CLinkedList<Traits>::CLinkedList(CLinkedList &&other){
     m_pRoot    = std:move(other.m_pRoot);
     m_nElem    = std:move(other.m_nElem);
     m_fCompare = std:move(other.m_fCompare);
 }
 
-template <typename T>
-CLinkedList<T>::~CLinkedList()
+template <typename Traits>
+CLinkedList<Traits>::~CLinkedList()
 {
 }
 
 // TODO: Este operador debe quedar fuera de a clase
-template <typename T>
-std::ostream &operator<<(std::ostream &os, CLinkedList<T> &obj){
+template <typename Traits>
+std::ostream &operator<<(std::ostream &os, CLinkedList<Traits> &obj){
     auto pRoot = obj.GetRoot();
     while( pRoot )
         os << pRoot->GetData() << " ";
