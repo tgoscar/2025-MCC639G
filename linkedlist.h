@@ -6,7 +6,7 @@
 template <typename Traits>
 class LLNode{
 private:
-    using    value_type = Traits::T;
+    using    value_type = typename Traits::T;
     using    Node       = LLNode<Traits>;
     using    MySelf     = LLNode<Traits>;
     value_type          m_data;
@@ -28,7 +28,7 @@ public:
 template <typename Traits>
 class forward_linkedlist_iterator{
  private:
-     using value_type = Traits::T;
+     using value_type = typename Traits::T;
      using Node       = LLNode<Traits>;
      using iterator   = forward_linkedlist_iterator<Traits>;
      using Container  = class CLinkedList<Traits>;
