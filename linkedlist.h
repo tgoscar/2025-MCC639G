@@ -7,9 +7,9 @@ template <typename Traits>
 class LLNode{
 private:
     using    value_type = Traits::T;
-    using    Node = LLNode<Traits>;
-    using    MySelf=LLNode<Traits>;
-    value_type     m_data;
+    using    Node       = LLNode<Traits>;
+    using    MySelf     = LLNode<Traits>;
+    value_type          m_data;
     Ref      m_ref;
     Node    *m_pNext = nullptr;
 
