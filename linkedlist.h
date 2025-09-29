@@ -27,33 +27,33 @@ public:
 // TODO Activar el iterator
 template <typename T>
 class forward_linkedlist_iterator{
-// private:
-//     using value_type = T;
-//     using Node       = LLNode<T>;
-//     using iterator   = forward_linkedlist_iterator<T>;
-//     using Container  = class CLinkedList<T>;
+ private:
+     using value_type = T;
+     using Node       = LLNode<T>;
+     using iterator   = forward_linkedlist_iterator<T>;
+     using Container  = class CLinkedList<T>;
 
-//     Container *m_pList = nullptr;
-//     Node      *m_pNode = nullptr;
-// public:
-//     forward_linkedlist_iterator(Container *pList, Node *pNode)
-//             : m_pList(pList), m_pNode(pNode){}
-//     forward_linkedlist_iterator(forward_linkedlist_iterator<T> &other)
-//             : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
-//     bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
-//     bool operator!=(iterator other){ return !(*this == other);    }
+     Container *m_pList = nullptr;
+     Node      *m_pNode = nullptr;
+ public:
+     forward_linkedlist_iterator(Container *pList, Node *pNode)
+             : m_pList(pList), m_pNode(pNode){}
+     forward_linkedlist_iterator(forward_linkedlist_iterator<T> &other)
+             : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
+     bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
+     bool operator!=(iterator other){ return !(*this == other);    }
 
-//     iterator operator++(){ 
-//         if(m_pNode)
-//             m_pNode = m_pNode->GetNext();
-//         return *this;
-//     }
-//     value_type &operator*(){    return m_pNode->GetDataRef();   }
+     iterator operator++(){ 
+         if(m_pNode)
+             m_pNode = m_pNode->GetNext();
+         return *this;
+     }
+     value_type &operator*(){    return m_pNode->GetDataRef();   }
 };
 
 // TODO Agregar control de concurrencia
 
-// TODO Agregar qeu sea ascendente o descendente con ell mismo codigo
+// TODO Agregar que sea ascendente o descendente con el mismo codigo
 template <typename T>
 class CLinkedList{
 private:
@@ -79,8 +79,8 @@ private:
     void InternalInsert(Node *&rParent, value_type &elem, Ref ref);
     Node *GetRoot()    {    return m_pRoot;     };
 
-    // iterator begin(){ return forward_linkedlist_iterator(this, m_pRoot); };
-    // iterator end()  { return forward_linkedlist_iterator(this, nullptr); } 
+    iterator begin(){ return forward_linkedlist_iterator(this, m_pRoot); };
+    iterator end()  { return forward_linkedlist_iterator(this, nullptr); } 
 
     friend std::ostream& operator<<(std::ostream &os, CLinkedList<T> &obj){
         auto pRoot = obj.GetRoot();
