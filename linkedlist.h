@@ -3,16 +3,20 @@
 #include <iostream>
 #include "types.h"
 
-template <typename T>
-struct LLinkedListAsc{
+template <typename T, typename _Func>
+struct LLinkedListTraits{
     using value_type = T;
-    using Func       = std::less<value_type>;
+    using Func       = _Func;
 };
 
 template <typename T>
-struct LLinkedListDesc{
-    using value_type = T;
-    using Func       = std::greater<value_type>;
+struct LLinkedListAsc : 
+    public LLinkedListTraits<T, std::less<T> >{
+};
+
+template <typename T>
+struct LLinkedListDesc : 
+    public LLinkedListTraits<T, std::greater<T> >{
 };
 
 template <typename Traits>
@@ -68,14 +72,14 @@ class forward_linkedlist_iterator{
 // TODO Agregar que sea ascendente o descendente con el mismo codigo
 template <typename Traits>
 class CLinkedList{
-private:
+public:
     using value_type = typename Traits::value_type; 
     using Func       = typename Traits::Func;
     using Node       = LLNode<Traits>; 
     using Container  = CLinkedList<Traits>;
     using iterator   = forward_linkedlist_iterator<Container>;
-    friend class iterator;
-    
+
+private:
     Node   *m_pRoot = nullptr;
     size_t m_nElem = 0;
     Func   m_fCompare;
@@ -97,8 +101,8 @@ private:
     Node *GetRoot()    {    return m_pRoot;     };
 
 public:
-    iterator begin(){ return forward_linkedlist_iterator(this, m_pRoot); };
-    iterator end()  { return forward_linkedlist_iterator(this, nullptr); } 
+    iterator begin(){ return iterator(this, m_pRoot); };
+    iterator end()  { return iterator(this, nullptr); } 
 
     friend std::ostream& operator<<(std::ostream &os, CLinkedList<Traits> &obj){
         auto pRoot = obj.GetRoot();

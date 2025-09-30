@@ -1,7 +1,6 @@
 #ifndef __FOREACH_H__
 #define __FOREACH_H__
 
-
 template <typename Iterator, typename Func>
 void foreach(Iterator begin, Iterator end, Func fn){
     auto iter = begin;
