@@ -5,7 +5,7 @@
 template <typename Iterator, typename Func>
 void foreach(Iterator begin, Iterator end, Func fn){
     auto iter = begin;
-    for(; iter != end ; iter++ )
+    for(; iter != end ; ++iter )
         fn( *iter );
 }
 

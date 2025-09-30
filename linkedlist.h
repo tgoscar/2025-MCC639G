@@ -3,10 +3,22 @@
 #include <iostream>
 #include "types.h"
 
+template <typename T>
+struct LLinkedListAsc{
+    using value_type = T;
+    using Func       = std::less<value_type>;
+};
+
+template <typename T>
+struct LLinkedListDesc{
+    using value_type = T;
+    using Func       = std::greater<value_type>;
+};
+
 template <typename Traits>
 class LLNode{
 private:
-    using    value_type = typename Traits::T;
+    using    value_type = typename Traits::value_type;
     using    Node       = LLNode<Traits>;
     using    MySelf     = LLNode<Traits>;
     value_type          m_data;
@@ -24,21 +36,21 @@ public:
     Node *&GetNextRef() { return m_pNext;    }
 };
 
+// 
 // TODO Activar el iterator
-template <typename Traits>
+template <typename Container> // HERE: TTraits -> Container
 class forward_linkedlist_iterator{
  private:
-     using value_type = typename Traits::T;
-     using Node       = LLNode<Traits>;
-     using iterator   = forward_linkedlist_iterator<Traits>;
-     using Container  = class CLinkedList<Traits>;
+     using value_type = typename Container::value_type;
+     using Node       = typename Container::Node;
+     using iterator   = forward_linkedlist_iterator<Container>;
 
      Container *m_pList = nullptr;
      Node      *m_pNode = nullptr;
  public:
      forward_linkedlist_iterator(Container *pList, Node *pNode)
              : m_pList(pList), m_pNode(pNode){}
-     forward_linkedlist_iterator(forward_linkedlist_iterator<Traits> &other)
+     forward_linkedlist_iterator(iterator &other)
              : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
      bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
      bool operator!=(iterator other){ return !(*this == other);    }
@@ -58,13 +70,15 @@ template <typename Traits>
 class CLinkedList{
 private:
     using value_type = typename Traits::value_type; 
-    using Func       = Traits::Func;
+    using Func       = typename Traits::Func;
     using Node       = LLNode<Traits>; 
-    using iterator   = forward_linkedlist_iterator<Traits>;
-
+    using Container  = CLinkedList<Traits>;
+    using iterator   = forward_linkedlist_iterator<Container>;
+    friend class iterator;
+    
     Node   *m_pRoot = nullptr;
-    size_t  m_nElem = 0;
-    Func m_fCompare;
+    size_t m_nElem = 0;
+    Func   m_fCompare;
 
 public:
     // Constructor
@@ -82,10 +96,11 @@ private:
     void InternalInsert(Node *&rParent, value_type &elem, Ref ref);
     Node *GetRoot()    {    return m_pRoot;     };
 
+public:
     iterator begin(){ return forward_linkedlist_iterator(this, m_pRoot); };
     iterator end()  { return forward_linkedlist_iterator(this, nullptr); } 
 
-    friend std::ostream& operator<<(std::ostream &os, CLinkedList<T> &obj){
+    friend std::ostream& operator<<(std::ostream &os, CLinkedList<Traits> &obj){
         auto pRoot = obj.GetRoot();
         while( pRoot ){
             os << pRoot->GetData() << "(" << pRoot->GetRef() << ") ";
@@ -122,9 +137,9 @@ CLinkedList<Traits>::CLinkedList(CLinkedList &other){
 // Move Constructor
 template <typename Traits>
 CLinkedList<Traits>::CLinkedList(CLinkedList &&other){
-    m_pRoot    = std:move(other.m_pRoot);
-    m_nElem    = std:move(other.m_nElem);
-    m_fCompare = std:move(other.m_fCompare);
+    m_pRoot    = std::move(other.m_pRoot);
+    m_nElem    = std::move(other.m_nElem);
+    m_fCompare = std::move(other.m_fCompare);
 }
 
 template <typename Traits>

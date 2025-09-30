@@ -17,9 +17,4 @@ void DemoVector(){
     foreach(vec, [](int &n){ n+=5;  } );
     foreach(vec, ::Print<int>);
     cout <<endl;
-
-// TODO Repetir las funcionalidades arriba pero para nuestra
-//      CLinkedList
-
-    // foreach(vec.begin(), vec.end(), ope1);
 }

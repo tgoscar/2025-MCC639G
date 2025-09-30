@@ -1,36 +1,43 @@
 #include <iostream>
+#include <vector>
+#include <utility> // para std::pair
 #include "linkedlist.h"
+#include "foreach.h"
+#include "types.h"
+#include "util.h"
 
-template <typename T>
-struct LLinkedListAsc{
-    using value_type = T;
-    using Func       = std::less;
-};
-
-template <typename T>
-struct LLinkedListDesc{
-    using value_type = T;
-    using Func       = std::greater;
-};
+void opex(int &n){ n++; }
 
 void DemoLinkedList(){
-    CLinkedList< LLinkedListAsc<int> > l1;
-    int x = 5;
-    l1.Insert(x, 3);
-    x = 7;
-    l1.Insert(x, 14);
+    std::vector< std::pair<T1, Ref> > v1 = {
+        {4, 8}, {2, 5}, {7, 3}, {1, 9}, {5, 2}
+    };
+    CLinkedList< LLinkedListAsc<T1> > l1;
+    for (auto &par : v1)
+        l1.Insert(par.first, par.second);
     std::cout << l1 << std::endl;
 
-    CLinkedList<LLinkedListDesc<float>> l2;
-    float x = 5.3;
-    l2.Insert(x, 3);
-    x = 7.2;
-    l2.Insert(x, 14);
+    std::vector< std::pair<T2, Ref> > v2 = {
+        {4.5, 8}, {2.3, 5}, {7.8, 3}, {1.1, 9}, {5.7, 2}
+    };
+    CLinkedList< LLinkedListDesc<T2> > l2;
+    // Insertar desde el vector
+    for (auto &par : v2) {
+        l2.Insert(par.first, par.second);
+    }
     std::cout << l2 << std::endl;
-    
-    // std::cout << l1 << x << "hola";
-    // CLinkedList<float> l2;
-    // float f = 3.14;
-    // l2.Insert(f, 17);
-    // std::cout << l2;
+
+    std::cout << "Ahora utilizando foreach #1..." << std::endl;
+    foreach(l1, ::opex);
+    std::cout << "Imprimiendo: l1 (debe haber aumentado en 1) ..." << std::endl;
+    foreach(l1, ::Print<T1>);
+    cout <<endl;
+    std::cout << "l1 aplicando funcion lambda +2 ..." << std::endl;
+    foreach(l1, [](T1 &n){ n += 2;  } );
+    std::cout << "Imprimiendo: l1 (debe haber aumentado en 1) ..." << std::endl;
+    foreach(l1, ::Print<T1>);
+
+    std::cout << "Imprimiendo: l1 a través de begin() y end() ..." << std::endl;
+    foreach(l1.begin(), l1.end(), ::Print<T1>);
+    cout <<endl;
 }
