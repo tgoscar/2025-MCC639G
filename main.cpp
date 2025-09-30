@@ -3,6 +3,7 @@
 #include "util.h"
 #include "clasestemplate.h"
 #include "linkedlist.h"
+#include "doublelinkedlist.h"
 #include "pointers.h"
 // #include "vector.h"
 
@@ -33,5 +34,6 @@ int main(){
     // DemoVector();
     
     DemoLinkedList();
+    DemoDoubleLinkedList();
     return 0;
 }
