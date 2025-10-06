@@ -1,6 +1,7 @@
 #ifndef __LINKEDLIST_H__
 #define __LINKEDLIST_H__
 #include <iostream>
+#include <mutex>      // <-- agregado para concurrencia
 #include "types.h"
 #include "traits.h"
 
