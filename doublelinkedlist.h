@@ -1,5 +1,5 @@
-#ifndef __LINKEDLIST_H__
-#define __LINKEDLIST_H__
+#ifndef __DOUBLE_LINKEDLIST_H__
+#define __DOUBLE_LINKEDLIST_H__
 #include <iostream>
 #include <mutex>      // <-- agregado para concurrencia
 #include "types.h"
@@ -10,14 +10,15 @@ class DLLNode{
 private:
     using    value_type = typename Traits::value_type;
     using    Node       = DLLNode<Traits>;
-    using    MySelf     = DLLNode<Traits>;
+
+    // Fields go here
     value_type          m_data;
-    Ref      m_ref;
-    Node    *m_pNext = nullptr;
-    Node    *m_pPrev = nullptr;
+    Ref                 m_ref;
+    Node               *m_pNext = nullptr;
+    Node               *m_pPrev = nullptr;
 
 public:
-    DLLNode(value_type &elem, Ref ref, DLLNode<Traits> *pNext = nullptr)
+    DLLNode(value_type &elem, Ref ref, Node *pNext = nullptr)
         : m_data(elem), m_ref(ref), m_pNext(pNext){
     }
     value_type   GetData()    { return m_data;     }
@@ -25,6 +26,8 @@ public:
     Ref    GetRef()     { return m_ref;      }
     Node * GetNext()    { return m_pNext;    }
     Node *&GetNextRef() { return m_pNext;    }
+    // Diff
+    void   SetNext(Node *pNext){    m_pNext = pNext; }
 
     // Particular para la double LinkedList
     Node * GetPrev()    { return m_pPrev;    }
@@ -38,6 +41,7 @@ class forward_double_linkedlist_iterator{
  private:
      using value_type = typename Container::value_type;
      using Node       = typename Container::Node;
+     // Diff
      using iterator   = forward_double_linkedlist_iterator<Container>;
 
      Container *m_pList = nullptr;
@@ -50,6 +54,7 @@ class forward_double_linkedlist_iterator{
      bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
      bool operator!=(iterator other){ return !(*this == other);    }
 
+     // Diff
      iterator operator++(){ 
          if(m_pNode)
              m_pNode = m_pNode->GetNext();
@@ -58,11 +63,12 @@ class forward_double_linkedlist_iterator{
      value_type &operator*(){    return m_pNode->GetDataRef();   }
 };
 
-template <typename Container> // HERE: TTraits -> Container
+template <typename Container>
 class backward_double_linkedlist_iterator{
  private:
      using value_type = typename Container::value_type;
      using Node       = typename Container::Node;
+     // Diff
      using iterator   = backward_double_linkedlist_iterator<Container>;
 
      Container *m_pList = nullptr;
@@ -72,9 +78,12 @@ class backward_double_linkedlist_iterator{
              : m_pList(pList), m_pNode(pNode){}
      backward_double_linkedlist_iterator(iterator &other)
              : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
-     bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
+     bool operator==(iterator other){ return m_pList == other.m_pList && 
+                                             m_pNode == other.m_pNode;
+                                    }
      bool operator!=(iterator other){ return !(*this == other);    }
 
+     // Diff
      iterator operator++(){ 
          if(m_pNode)
              m_pNode = m_pNode->GetPrev();
@@ -98,6 +107,7 @@ public:
     
 private:
     Node   *m_pRoot = nullptr;
+    Node   *m_pTail = nullptr;
     size_t m_nElem = 0;
     Func   m_fCompare;
     std::mutex m_mutex; // <-- agregado: control de concurrencia
@@ -154,6 +164,7 @@ void CDoubleLinkedList<Traits>::Insert(value_type &elem, Ref ref){
     InternalInsert(m_pRoot, elem, ref);
 }
 
+// TODO: Agregar el enlace para el Prev()
 template <typename Traits>
 void CDoubleLinkedList<Traits>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
     if( !rParent || m_fCompare(elem, rParent->GetDataRef()) ){
@@ -221,13 +232,13 @@ std::istream &CDoubleLinkedList<Traits>::Read (std::istream &is){
 }
 
 // TODO: Este operador debe quedar fuera de la clase
-template <typename Traits>
-std::ostream &operator<<(std::ostream &os, CDoubleLinkedList<Traits> &obj){
-    auto pRoot = obj.GetRoot();
-    while( pRoot )
-        os << pRoot->GetData() << " ";
-    return os;
-}
+// template <typename Traits>
+// std::ostream &operator<<(std::ostream &os, CDoubleLinkedList<Traits> &obj){
+//     auto pRoot = obj.GetRoot();
+//     while( pRoot )
+//         os << pRoot->GetData() << " ";
+//     return os;
+// }
 
 void DemoDoubleLinkedList();
 
