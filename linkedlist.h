@@ -69,6 +69,7 @@ private:
     Node   *m_pRoot = nullptr;
     size_t m_nElem = 0;
     Func   m_fCompare;
+    std::mutex m_mutex;  // <-- agregado: control de concurrencia
 
 public:
     // Constructor
@@ -108,6 +109,8 @@ public:
 
 template <typename Traits>
 void CLinkedList<Traits>::Insert(value_type &elem, Ref ref){
+    // proteger inserción pública (concurrente)
+    std::lock_guard<std::mutex> lg(m_mutex);
     InternalInsert(m_pRoot, elem, ref);
 }
 
@@ -129,6 +132,13 @@ CLinkedList<Traits>::CLinkedList(){}
 //      Hacer loop copiando cada elemento
 template <typename Traits>
 CLinkedList<Traits>::CLinkedList(CLinkedList &other){
+    // Copia profunda: reusar Insert para mantener orden/consistencia.
+    auto p = other.m_pRoot;
+    while (p){
+        auto v = p->GetDataRef(); // copia del valor
+        Insert(v, p->GetRef());   // Insert (thread-safe) llama a InternalInsert
+        p = p->GetNext();
+    }
 }
 
 // Move Constructor
@@ -143,6 +153,28 @@ CLinkedList<Traits>::CLinkedList(CLinkedList &&other){
 template <typename Traits>
 CLinkedList<Traits>::~CLinkedList()
 {
+    // Liberar todos los nodos (no hace falta bloquear al destruir)
+    auto p = m_pRoot;
+    while (p){
+        auto q = p->GetNext();
+        delete p;
+        p = q;
+    }
+    m_pRoot = nullptr;
+    m_nElem = 0;
+}
+
+// Implementación de Read(istream&): lee pares value/ref e inserta
+template <typename Traits>
+std::istream &CLinkedList<Traits>::Read (std::istream &is){
+    std::lock_guard<std::mutex> lg(m_mutex); // cargar de forma atómica
+    value_type v;
+    Ref r;
+    while (is >> v >> r){
+        InternalInsert(m_pRoot, v, r); // ya bajo lock
+        m_nElem++;
+    }
+    return is;
 }
 
 // TODO: Este operador debe quedar fuera de la clase
