@@ -2,6 +2,8 @@
 #define __LINKEDLIST_H__
 #include <iostream>
 #include "types.h"
+#include <mutex>
+
 
 template <typename T, typename _Func>
 struct LLinkedListTraits{
@@ -83,7 +85,7 @@ private:
     Node   *m_pRoot = nullptr;
     size_t m_nElem = 0;
     Func   m_fCompare;
-
+    std::mutex m_mutex;
 public:
     // Constructor
     CLinkedList();
@@ -96,6 +98,10 @@ public:
     virtual ~CLinkedList();
 
     void Insert(value_type &elem, Ref ref);
+
+    // <-- agregado: lectura desde istream
+    void Read(std::istream &is);
+
 private:
     void InternalInsert(Node *&rParent, value_type &elem, Ref ref);
     Node *GetRoot()    {    return m_pRoot;     };
@@ -116,6 +122,8 @@ public:
 
 template <typename Traits>
 void CLinkedList<Traits>::Insert(value_type &elem, Ref ref){
+    // concurrencia: proteger operación de inserción pública
+    std::lock_guard<std::mutex> lg(m_mutex);
     InternalInsert(m_pRoot, elem, ref);
 }
 
@@ -130,12 +138,15 @@ void CLinkedList<Traits>::InternalInsert(Node *&rParent, value_type &elem, Ref r
 }
 
 template <typename Traits>
-CLinkedList<Traits>::CLinkedList(){}
-
-// TODO Constructor por copia
-//      Hacer loop copiando cada elemento
-template <typename Traits>
 CLinkedList<Traits>::CLinkedList(CLinkedList &other){
+    // Nota: mantenemos el estilo original y reutilizamos Insert para respetar el orden
+    // y la lógica de comparación definida por Traits::Func (m_fCompare).
+    auto p = other.m_pRoot;
+    while (p){
+        auto val = p->GetDataRef(); // se crea una copia del valor
+        Insert(val, p->GetRef());   // Insert está protegido con mutex y usa InternalInsert
+        p = p->GetNext();
+    }
 }
 
 // Move Constructor
@@ -148,7 +159,31 @@ CLinkedList<Traits>::CLinkedList(CLinkedList &&other){
 
 template <typename Traits>
 CLinkedList<Traits>::~CLinkedList()
+CLinkedList<Traits>::~CLinkedList()
 {
+    // Destructor seguro: liberar todos los nodos
+    // No es necesario bloquear el mutex aquí (destrucción del propio objeto).
+    auto p = m_pRoot;
+    while (p){
+        auto q = p->GetNext();
+        delete p;
+        p = q;
+    }
+    m_pRoot = nullptr;
+    m_nElem = 0;
+}
+
+// <-- agregado: implementación Read(istream&)
+// Lee pares (value_type, Ref) hasta EOF/entrada inválida e inserta cada uno
+template <typename Traits>
+void CLinkedList<Traits>::Read(std::istream &is){
+    std::lock_guard<std::mutex> lg(m_mutex); // proteger construcción concurrente
+    value_type v;
+    Ref r;
+    while (is >> v >> r){
+        // usar inserción interna porque ya tenemos el lock
+        InternalInsert(m_pRoot, v, r);
+    }
 }
 
 // TODO: Este operador debe quedar fuera de a clase
