@@ -1,6 +1,7 @@
 #ifndef __LINKEDLIST_H__
 #define __LINKEDLIST_H__
 #include <iostream>
+#include <mutex>      // <-- agregado para concurrencia
 #include "types.h"
 #include "traits.h"
 
@@ -26,8 +27,8 @@ public:
     Node *&GetNextRef() { return m_pNext;    }
 
     // Particular para la double LinkedList
-    Node * GetPrev()    { return m_pNext;    }
-    Node *&GetPrevRef() { return m_pNext;    }
+    Node * GetPrev()    { return m_pPrev;    }
+    Node *&GetPrevRef() { return m_pPrev;    }
 };
 
 // 
@@ -99,6 +100,7 @@ private:
     Node   *m_pRoot = nullptr;
     size_t m_nElem = 0;
     Func   m_fCompare;
+    std::mutex m_mutex; // <-- agregado: control de concurrencia
 
 public:
     // Constructor
@@ -121,8 +123,14 @@ public:
     forward_iterator end()  { return forward_iterator(this, nullptr); } 
 
     // TODO: verifricar donde debe comenzar apuntando el iterator reverso
-    forward_iterator rbegin(){ return backward_iterator(this, m_pRoot); };
-    forward_iterator rend()  { return backward_iterator(this, nullptr); } 
+    backward_iterator rbegin(){                        // <-- tipo corregido
+        // iniciar en el último nodo
+        Node *p = m_pRoot;
+        if (!p) return backward_iterator(this, nullptr);
+        while (p->GetNext()) p = p->GetNext();
+        return backward_iterator(this, p);
+    };
+    backward_iterator rend()  { return backward_iterator(this, nullptr); } // <-- tipo corregido
 
     friend std::ostream& operator<<(std::ostream &os, CDoubleLinkedList<Traits> &obj){
         auto pRoot = obj.GetRoot();
@@ -142,13 +150,17 @@ public:
 
 template <typename Traits>
 void CDoubleLinkedList<Traits>::Insert(value_type &elem, Ref ref){
+    std::lock_guard<std::mutex> lg(m_mutex); // <-- proteger inserción
     InternalInsert(m_pRoot, elem, ref);
 }
 
 template <typename Traits>
 void CDoubleLinkedList<Traits>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
     if( !rParent || m_fCompare(elem, rParent->GetDataRef()) ){
-        rParent = new Node(elem, ref, rParent);
+        // Insertamos antes de rParent: ajustar enlaces next/prev mínimamente
+        Node* old = rParent;
+        rParent = new Node(elem, ref, old);
+        if (old) old->GetPrevRef() = rParent;   // <-- mantener doble enlace correcto
         m_nElem++;
         return;
     }
@@ -163,6 +175,13 @@ CDoubleLinkedList<Traits>::CDoubleLinkedList(){}
 //      Hacer loop copiando cada elemento
 template <typename Traits>
 CDoubleLinkedList<Traits>::CDoubleLinkedList(CDoubleLinkedList &other){
+    // Copia profunda: reusar Insert para preservar orden/consistencia
+    auto p = other.m_pRoot;
+    while (p){
+        auto v = p->GetDataRef();
+        Insert(v, p->GetRef());   // Insert (thread-safe)
+        p = p->GetNext();
+    }
 }
 
 // Move Constructor
@@ -177,6 +196,28 @@ CDoubleLinkedList<Traits>::CDoubleLinkedList(CDoubleLinkedList &&other){
 template <typename Traits>
 CDoubleLinkedList<Traits>::~CDoubleLinkedList()
 {
+    // Liberar todos los nodos (no se requiere bloquear al destruir)
+    auto p = m_pRoot;
+    while (p){
+        auto q = p->GetNext();
+        delete p;
+        p = q;
+    }
+    m_pRoot = nullptr;
+    m_nElem = 0;
+}
+
+// Read(istream&): lee pares (value, Ref) e inserta bajo lock
+template <typename Traits>
+std::istream &CDoubleLinkedList<Traits>::Read (std::istream &is){
+    std::lock_guard<std::mutex> lg(m_mutex);
+    value_type v;
+    Ref r;
+    while (is >> v >> r){
+        InternalInsert(m_pRoot, v, r); // ya bajo lock
+        m_nElem++;
+    }
+    return is;
 }
 
 // TODO: Este operador debe quedar fuera de la clase
