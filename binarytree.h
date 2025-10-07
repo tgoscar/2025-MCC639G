@@ -113,60 +113,20 @@ protected:
         return internal_insert(elem, ref, nullptr, rpOrigin, rpOrigin->getChildRef(branch));
     }
 public:
-    // TODO: Selis Luis (Move Constructor)
-    CBinaryTree(Binary &&other){ }
+    // TODO: Selis Luis (Copy Constructor)
+    CBinaryTree(Binary &other);
+    
+    CBinaryTree(Binary &&other)
+        : m_pRoot(std::move(other.m_pRoot)), 
+          m_size (std::move(other.m_size)), 
+          Compfn (std::move(other.Compfn))
+    { }
 
     // TODO: Selis Luis (Destructor)
     virtual ~CBinaryTree(){  } 
     
     // TODO: Quispe David
-    void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
-    void inorder(void (*visit) (value_type& item))
-    {   inorder(m_pRoot, visit);    }
-
-    template <typename Func>
-    void postorder(Func fn) {    postorder(m_pRoot, 0, fn);}
-
-    template <typename Func>
-    void postorder(Node* pNode, size_t level, Func fn) {
-        if (pNode) {
-            postorder(pNode->getChild(0), level + 1, fn);
-            postorder(pNode->getChild(1), level + 1, fn);
-            fn(pNode, level);  // aplica la función pasada
-        }
-    }
-    // TODO: Villanueva Richard
-    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
-    // TODO: Generalize this function by using iterators and apply any function
-    // Create a new iterator to walk in postorder
-    // TODO: Villanueva Richard
-    void preorder(Node  *pNode, ostream &os, size_t level){
-        //foreach(preorderbegin(), preorderend(), fn)
-        if( pNode ){   
-            os << " --> " << pNode->getDataRef();
-            preorder(pNode->getChild(0), os, level+1);
-            preorder(pNode->getChild(1), os, level+1);            
-        }
-    }
-
-    void print    (ostream &os)    {   print    (m_pRoot, os, 0);  }
-    // TODO: generalize this function by using iterators and apply any function
-    void print(Node  *pNode, ostream &os, size_t level){
-        if( pNode ){
-            Node *pParent = pNode->getParent();
-            print(pNode->getChild(1), os, level+1);
-            //os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?(pNode->getBranch()?"R-":"L-") + to_string(pParent->getData()):"Root") << ")" <<endl;
-            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
-            print(pNode->getChild(0), os, level+1);
-        }
-    }
-    
-protected:
-    // TODO: Open question for everyone
-    // Generalizar el recorrido para recibir cualquier funcion
-    // con una cantidad flexible de parametros conm variadic templates
-    // https://en.cppreference.com/w/cpp/language/parameter_packs
-    
+        void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
     // TODO: Quispe David
     void inorder(Node  *pNode, ostream &os, size_t level){
         if( pNode ){
@@ -177,16 +137,6 @@ protected:
         }
     }
 
-    // TODO: Alcazar Joseph
-    void postorder(Node  *pNode, ostream &os, size_t level){
-        //foreach(postorderbegin(), postorderend(), fn)
-        if( pNode ){   
-            postorder(pNode->getChild(0), os, level+1);
-            postorder(pNode->getChild(1), os, level+1);
-            os << " --> " << pNode->getDataRef();
-        }
-    }
-
     // TODO: generalize this function by using iterators and apply any function
     // TODO: Quispe David
     void inorder(Node  *pNode, void (*visit) (value_type& item)){
@@ -194,6 +144,59 @@ protected:
             inorder(pNode->getChild(0), *visit);
             (*visit)(pNode->getDataRef());
             inorder(pNode->getChild(1), *visit);
+        }
+    }
+
+    // Variadic templates (See foreach.h)
+    template <typename Function, typename... Args>
+    void postorder(Function func, Args const&... args)
+    {    postorder(m_pRoot, 0, func, args...);}
+
+    template <typename Function,typename... Args>
+    void postorder(Node* pNode, size_t level, Function func, Args const&... args) {
+        if (pNode) {
+            postorder(pNode->getChild(0), level + 1, func, args...);
+            postorder(pNode->getChild(1), level + 1, func, args...);
+            func(pNode, level); 
+        }
+    }
+    // TODO: Villanueva Richard
+    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
+    // TODO: Generalize this function by using iterators and apply any function
+    // Create a new iterator to walk in postorder
+    // TODO: Villanueva Richard
+    void preorder(Node  *pNode, size_t level, ostream &os){
+        //foreach(preorderbegin(), preorderend(), fn)
+        if( pNode ){   
+            os << " --> " << pNode->getDataRef();
+            preorder(pNode->getChild(0), level+1, os);
+            preorder(pNode->getChild(1), level+1, os);            
+        }
+    }
+
+    void print    (ostream &os)    {   print    (m_pRoot, 0, os);  }
+    // TODO: generalize this function by using iterators and apply any function
+    void print(Node  *pNode, size_t level, ostream &os){
+        if( pNode ){
+            Node *pParent = pNode->getParent();
+            print(pNode->getChild(1), level+1, os);
+            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
+            print(pNode->getChild(0), level+1, os);
+        }
+    }
+
+    // TODO: Open question for everyone
+    // Generalizar el recorrido para recibir cualquier funcion
+    // con una cantidad flexible de parametros conm variadic templates
+    // https://en.cppreference.com/w/cpp/language/parameter_packs
+    
+    // TODO: Alcazar Joseph
+    void postorder(Node  *pNode, size_t level, ostream &os){
+        //foreach(postorderbegin(), postorderend(), fn)
+        if( pNode ){   
+            postorder(pNode->getChild(0), level+1, os);
+            postorder(pNode->getChild(1), level+1, os);
+            os << " --> " << pNode->getDataRef();
         }
     }
 
@@ -209,7 +212,6 @@ protected:
 template <typename Traits>
 ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
     os << "CBinaryTree with " << obj.size() << " elements.";
-    // Imprimir el larbo inorder
     obj.inorder(os);
     return os;
 }
