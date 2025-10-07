@@ -101,4 +101,6 @@ void DemoBinaryTree(){
     std::cout << "Inorder traversal using foreach:" << std::endl;
     // t1.inorder(t1.getRoot(), ::Print<T1>);
     std::cout << std::endl;
+
+    // Next classes: AVL, BTree
 }
