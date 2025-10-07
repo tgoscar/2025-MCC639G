@@ -21,7 +21,6 @@ private:
     Ref     m_ref;
     vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
 public:
-    // TODO: Fuentes Patrick (revisar que el Ref llegue bien)
     CBinaryTreeNode(Node* pParent, KeyNode data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
         : m_pParent(pParent), m_data(data), m_ref(ref)
     {
@@ -29,7 +28,7 @@ public:
         m_pChild[1] = p1;
     }
 
-// TODO: Keynode 
+    // TODO: Keynode 
     T         getData()                {   return m_data;    }
     T        &getDataRef()             {   return m_data;    }
  
@@ -99,7 +98,6 @@ public:
     }
 
 protected:
-    // TODO: Fuentes Patrick
     Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
         return new Node(pParent, elem, ref);
     }
@@ -123,16 +121,46 @@ public:
     
     // TODO: Quispe David
     void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
-
-    // TODO: Alcazar Joseph
-    void postorder(ostream &os)    {   postorder(m_pRoot, os, 0);  }
-
-    // TODO: Villanueva Richard
-    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
-    void print    (ostream &os)    {   print    (m_pRoot, os, 0);  }
     void inorder(void (*visit) (value_type& item))
     {   inorder(m_pRoot, visit);    }
 
+    template <typename Func>
+    void postorder(Func fn) {    postorder(m_pRoot, 0, fn);}
+
+    template <typename Func>
+    void postorder(Node* pNode, size_t level, Func fn) {
+        if (pNode) {
+            postorder(pNode->getChild(0), level + 1, fn);
+            postorder(pNode->getChild(1), level + 1, fn);
+            fn(pNode, level);  // aplica la función pasada
+        }
+    }
+    // TODO: Villanueva Richard
+    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
+    // TODO: Generalize this function by using iterators and apply any function
+    // Create a new iterator to walk in postorder
+    // TODO: Villanueva Richard
+    void preorder(Node  *pNode, ostream &os, size_t level){
+        //foreach(preorderbegin(), preorderend(), fn)
+        if( pNode ){   
+            os << " --> " << pNode->getDataRef();
+            preorder(pNode->getChild(0), os, level+1);
+            preorder(pNode->getChild(1), os, level+1);            
+        }
+    }
+
+    void print    (ostream &os)    {   print    (m_pRoot, os, 0);  }
+    // TODO: generalize this function by using iterators and apply any function
+    void print(Node  *pNode, ostream &os, size_t level){
+        if( pNode ){
+            Node *pParent = pNode->getParent();
+            print(pNode->getChild(1), os, level+1);
+            //os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?(pNode->getBranch()?"R-":"L-") + to_string(pParent->getData()):"Root") << ")" <<endl;
+            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
+            print(pNode->getChild(0), os, level+1);
+        }
+    }
+    
 protected:
     // TODO: Open question for everyone
     // Generalizar el recorrido para recibir cualquier funcion
@@ -156,31 +184,6 @@ protected:
             postorder(pNode->getChild(0), os, level+1);
             postorder(pNode->getChild(1), os, level+1);
             os << " --> " << pNode->getDataRef();
-        }
-    }
-
-    // TODO: Generalize this function by using iterators and apply any function
-    // Create a new iterator to walk in postorder
-    // TODO: Villanueva Richard
-    void preorder(Node  *pNode, ostream &os, size_t level){
-        //foreach(preorderbegin(), preorderend(), fn)
-        if( pNode ){   
-            os << " --> " << pNode->getDataRef();
-            preorder(pNode->getChild(0), os, level+1);
-            preorder(pNode->getChild(1), os, level+1);            
-        }
-    }
-    
-    // TODO: generalize this function by using iterators and apply any function
-    void print(Node  *pNode, ostream &os, size_t level)
-    {
-        // foreach(begin(), end(), print);
-        if( pNode ){
-            Node *pParent = pNode->getParent();
-            print(pNode->getChild(1), os, level+1);
-            //os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?(pNode->getBranch()?"R-":"L-") + to_string(pParent->getData()):"Root") << ")" <<endl;
-            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
-            print(pNode->getChild(0), os, level+1);
         }
     }
 
