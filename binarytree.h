@@ -198,49 +198,52 @@ protected:
         
         string line;
         
-        // Leer y ignorar la primera línea descriptiva
-        getline(is, line);  // "CBinaryTree with X elements."
+        // Leer primera línea
+        if (!getline(is, line)) return;
         
-        // Si el árbol está vacío, terminar
+        // Verificar si está vacío
         if (line.find("Empty") != string::npos) {
             return;
         }
         
-        // Leer TODAS las líneas restantes en PRE-ORDEN
-        // Reconstruir el árbol exactamente como estaba
-        ReadPreOrderRecursive(is, nullptr, m_pRoot);
+        // Reconstruir árbol
+        try {
+            ReadPreOrderRobust(is, nullptr, m_pRoot);
+        } catch (const exception& e) {
+            // En caso de error, limpiar el árbol parcialmente construido
+            clear();
+            throw;
+        }
     }
     
     private:
-    void ReadPreOrderRecursive(istream &is, Node *pParent, Node *&rpNode) {
+    void ReadPreOrderRobust(istream &is, Node *pParent, Node *&rpNode) {
         string line;
         
-        // Leer una línea del stream
-        if (getline(is, line)) {
+        // Leer hasta encontrar una línea válida o fin del stream
+        while (getline(is, line)) {
+            // Saltar líneas vacías
+            if (line.empty()) continue;
+            
             stringstream ss(line);
-            string token;
+            string arrow;
             value_type elem;
             
-            // Buscar el patrón " --> elemento" en la línea
-            while (ss >> token) {
-                if (token == "-->") {
-                    if (ss >> elem) {
-                        // Crear el nodo actual (raíz del subárbol)
-                        rpNode = CreateNode(pParent, elem, nullptr);
-                        m_size++;
-                        
-                        // Reconstruir recursivamente subárbol izquierdo
-                        ReadPreOrderRecursive(is, rpNode, rpNode->getChildRef(0));
-                        
-                        // Reconstruir recursivamente subárbol derecho
-                        ReadPreOrderRecursive(is, rpNode, rpNode->getChildRef(1));
-                        return;
-                    }
+            if (ss >> arrow && arrow == "-->") {
+                if (ss >> elem) {
+                    // Elemento válido encontrado
+                    rpNode = CreateNode(pParent, elem, nullptr);
+                    m_size++;
+                    
+                    ReadPreOrderRobust(is, rpNode, rpNode->getChildRef(0));
+                    ReadPreOrderRobust(is, rpNode, rpNode->getChildRef(1));
+                    return;
                 }
             }
+            // Si llegamos aquí, la línea no era un elemento válido, next
         }
         
-        // Si no se encontró un elemento, este nodo es nulo
+        // Fin del stream, nodo nulo
         rpNode = nullptr;
     };
 
