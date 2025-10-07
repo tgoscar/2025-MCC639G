@@ -193,17 +193,39 @@ protected:
     void Write(ostream &os) { os << *this;  }
 
     // TODO: Toledo Oscar
-    void Read(istream &is)  {    
-        value_type elem;
+    void Read(istream &is)  {
+        clear();
         
-        // Leer elementos hasta el final del stream
-        while (is >> elem) {
-            insert(elem, nullptr);
-        }
-
-        // Limpiar estado de error si no llegamos al EOF
-        if(is.fail()&&!is.eof()) {
-            is.clear(); // Limpiar estado de error
+        string line1, line2;
+        
+        // Leer primera línea
+        if (getline(is, line1)) {
+            // Verificar si es árbol vacío
+            if (line1.find("Empty") != string::npos) {
+                return; // Árbol vacío, nada que leer
+            }
+            
+            // Leer segunda línea con elementos
+            if (getline(is, line2)) {
+                stringstream ss(line2);
+                string token;
+                value_type elem;
+                
+                while (ss >> token) {
+                    if (token == "-->") {
+                        // Leer el elemento después de "-->"
+                        if (ss >> elem) {
+                            insert(elem, nullptr);
+                        }
+                    } else {
+                        // Intentar convertir token directo a elemento
+                        stringstream token_ss(token);
+                        if (token_ss >> elem) {
+                            insert(elem, nullptr);
+                        }
+                    }
+                }
+            }
         }
     };
 
