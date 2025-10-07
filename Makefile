@@ -7,7 +7,7 @@ SRCS = main.cpp \
 	   test.cpp  util.cpp \
 	   clasestemplate.cpp \
 	   pointers.cpp \
-	   linkedlist.cpp \
+	   ContainersDemo.cpp \
 	   vector.cpp
 OBJS = $(SRCS:.cpp=.o)
 

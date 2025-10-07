@@ -4,6 +4,7 @@
 #include <utility> // para std::pair
 #include "linkedlist.h"
 #include "doublelinkedlist.h"
+#include "binarytree.h"
 #include "foreach.h"
 #include "types.h"
 #include "util.h"
@@ -70,4 +71,34 @@ void DemoDoubleLinkedList(){
 
     std::cout << "Imprimiendo con backward iterator" << std::endl;
     foreach(l1.rbegin(), l1.rend(), ::Print<T1>);
+}
+
+void DemoBinaryTree(){
+    std::vector< std::pair<T1, Ref> > v1 = {
+        {4, 8}, {2, 5}, {7, 3}, {1, 9}, {5, 2}
+    };
+    CBinaryTree< AscendingTrait<T1> > t1;
+    for (auto &par : v1)
+        t1.Insert(par.first, par.second);
+    std::cout << t1 << std::endl;
+
+    std::cout << "Inorder traversal:" << std::endl;
+    t1.inorder(t1.getRoot(), std::cout, 0);
+    std::cout << std::endl;
+
+    std::cout << "Preorder traversal:" << std::endl;
+    t1.preorder(t1.getRoot(), std::cout, 0);
+    std::cout << std::endl;
+
+    std::cout << "Postorder traversal:" << std::endl;
+    t1.postorder(t1.getRoot(), std::cout, 0);
+    std::cout << std::endl;
+
+    std::cout << "Tree structure:" << std::endl;
+    t1.print(t1.getRoot(), std::cout, 0);
+    std::cout << std::endl;
+
+    std::cout << "Inorder traversal using foreach:" << std::endl;
+    t1.inorder(t1.getRoot(), ::Print<T1>);
+    std::cout << std::endl;
 }
