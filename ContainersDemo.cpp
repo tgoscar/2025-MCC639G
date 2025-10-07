@@ -79,26 +79,26 @@ void DemoBinaryTree(){
     };
     CBinaryTree< AscendingTrait<T1> > t1;
     for (auto &par : v1)
-        t1.Insert(par.first, par.second);
+        t1.insert(par.first, par.second);
     std::cout << t1 << std::endl;
 
     std::cout << "Inorder traversal:" << std::endl;
-    t1.inorder(t1.getRoot(), std::cout, 0);
+    // t1.inorder(t1.getRoot(), std::cout, 0);
     std::cout << std::endl;
 
     std::cout << "Preorder traversal:" << std::endl;
-    t1.preorder(t1.getRoot(), std::cout, 0);
+    // t1.preorder(t1.getRoot(), std::cout, 0);
     std::cout << std::endl;
 
     std::cout << "Postorder traversal:" << std::endl;
-    t1.postorder(t1.getRoot(), std::cout, 0);
+    // t1.postorder(t1.getRoot(), std::cout, 0);
     std::cout << std::endl;
 
     std::cout << "Tree structure:" << std::endl;
-    t1.print(t1.getRoot(), std::cout, 0);
+    // t1.print(t1.getRoot(), std::cout, 0);
     std::cout << std::endl;
 
     std::cout << "Inorder traversal using foreach:" << std::endl;
-    t1.inorder(t1.getRoot(), ::Print<T1>);
+    // t1.inorder(t1.getRoot(), ::Print<T1>);
     std::cout << std::endl;
 }
