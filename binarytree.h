@@ -199,8 +199,41 @@ protected:
     void Write(ostream &os) { os << *this;  }
 
     // TODO: Toledo Oscar
-    void Read(istream &is)  { /* TODO */  }
-};
+    void Read(istream &is)  {
+        clear();
+        
+        string line1, line2;
+        
+        // Leer primera línea
+        if (getline(is, line1)) {
+            // Verificar si es árbol vacío
+            if (line1.find("Empty") != string::npos) {
+                return; // Árbol vacío, nada que leer
+            }
+            
+            // Leer segunda línea con elementos
+            if (getline(is, line2)) {
+                stringstream ss(line2);
+                string token;
+                value_type elem;
+                
+                while (ss >> token) {
+                    if (token == "-->") {
+                        // Leer el elemento después de "-->"
+                        if (ss >> elem) {
+                            insert(elem, nullptr);
+                        }
+                    } else {
+                        // Intentar convertir token directo a elemento
+                        stringstream token_ss(token);
+                        if (token_ss >> elem) {
+                            insert(elem, nullptr);
+                        }
+                    }
+                }
+            }
+        }
+    };
 
 // TODO: Arriola Aldo
 // operator <<
@@ -216,6 +249,7 @@ ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
 template <typename Traits>
 istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
     // Leer el arbol
+    obj.Read(is);
     return is;
 }
 
