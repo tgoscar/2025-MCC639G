@@ -75,7 +75,6 @@ struct BinaryTreeDescTraits
 template <typename Traits>
 class CBinaryTree{
   public:
-    // TODO: Segura Alex
     using value_type    = typename Traits::T;
     using Node          = typename Traits::Node;
     
