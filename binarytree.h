@@ -22,9 +22,12 @@ private:
     vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
 public:
     // TODO: Fuentes Patrick (revisar que el Ref llegue bien)
-    CBinaryTreeNode(Node *pParent, T data, Ref ref = nullptr, Node *p1 = nullptr) 
-        : m_pParent(pParent), m_data(data)
-    {   m_pChild[0] = p0;   m_pChild[1] = p1;   }
+    CBinaryTreeNode(Node* pParent, KeyNode data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
+        : m_pParent(pParent), m_data(data), m_ref(ref)
+    {
+        m_pChild[0] = p0;
+        m_pChild[1] = p1;
+    }
 
 // TODO: Keynode 
     T         getData()                {   return m_data;    }
@@ -52,9 +55,10 @@ public:
 
 public:
     // TODO: Fuentes Patrick
-    binary_tree_iterator operator++() { //Parent::m_pNode = (Node *)Parent::m_pNode->getpNext();  
-                                        return *this;
-                                  }
+    binary_tree_iterator operator++() {
+        Parent::m_pNode = Parent::m_pNode ? (Node*)Parent::m_pNode->getpNext() : nullptr;
+        return *this;
+    }
 };
 
 template <typename _T>
@@ -91,19 +95,25 @@ public:
     size_t  size()  const       { return m_size;       }
     bool    empty() const       { return size() == 0;  }
     // TODO: insert must receive two paramaters: elem and LinkedValueType value
-    virtual void    insert(value_type &elem, LinkedValueType value) { internal_insert(elem, value, nullptr, m_pRoot);  }
+    virtual void insert(value_type elem, Ref ref) {
+        m_pRoot = internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
+    }
 
 protected:
     // TODO: Fuentes Patrick
-    Node *CreateNode(Node *pParent, value_type &elem, Ref ref){ return new Node(pParent, elem); }
-    Node *internal_insert(value_type &elem, Ref ref, LinkedValueType value, Node *pParent, Node *&rpOrigin)
+    Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
+        return new Node(pParent, elem, ref);
+    }
+    Node* internal_insert(value_type elem, Ref ref, LinkedValueType value,
+                          Node* pParent, Node*& rpOrigin)
     {
-        if( !rpOrigin ) //  llegué al fondo de una rama
-        {   ++m_size;
-            return (rpOrigin = CreateNode(pParent, elem));
+        if (!rpOrigin) {
+            ++m_size;
+            return (rpOrigin = CreateNode(pParent, elem, ref));
         }
-        size_t branch = Compfn(elem, rpOrigin->getDataRef() );
-        return internal_insert1(elem, ref, rpOrigin, rpOrigin->getChildRef(branch));
+
+        size_t branch = Compfn(elem, rpOrigin->getDataRef()) ? 0 : 1;
+        return internal_insert(elem, ref, nullptr, rpOrigin, rpOrigin->getChildRef(branch));
     }
 public:
     // TODO: Selis Luis (Move Constructor)
