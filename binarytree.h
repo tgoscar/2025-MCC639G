@@ -12,18 +12,15 @@ template <typename Traits>
 class CBinaryTreeNode{
 public:
   // TODO: Change T by KeyNode
-  // TODO: Segura Alex (typedef -> using)
-  //typedef typename Traits::T          value_type;
   using value_type = typename Traits::T;
-private:
-  //typedef CBinaryTreeNode<T> Node;
   using Node = CBinaryTreeNode<T>;
-  public:
+
+private:
     T       m_data;
     Node *  m_pParent = nullptr;
     Ref     m_ref;
     vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
-  public:
+public:
     // TODO: Fuentes Patrick (revisar que el Ref llegue bien)
     CBinaryTreeNode(Node *pParent, T data, Ref ref = nullptr, Node *p1 = nullptr) 
         : m_pParent(pParent), m_data(data)
@@ -49,7 +46,11 @@ public: \
 
 template <typename Container>
 class binary_tree_iterator : public general_iterator<Container,  class binary_tree_iterator<Container> > // 
-{  _DEF(Container, binary_tree_iterator);
+{  
+public:
+    using Parent = class general_iterator<Container, binary_tree_iterator<Container> >;     \
+    using Node   = typename Container::Node;
+    using myself = binary_tree_iterator<Container>;
 
   public:
     binary_tree_iterator(Container *pContainer, Node *pNode) : Parent (pContainer,pNode) {}
