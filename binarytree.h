@@ -193,8 +193,19 @@ protected:
     void Write(ostream &os) { os << *this;  }
 
     // TODO: Toledo Oscar
-    void Read(istream &is)  { /* TODO */  }
-};
+    void Read(istream &is)  {    
+        value_type elem;
+        
+        // Leer elementos hasta el final del stream
+        while (is >> elem) {
+            insert(elem, nullptr);
+        }
+
+        // Limpiar estado de error si no llegamos al EOF
+        if(is.fail()&&!is.eof()) {
+            is.clear(); // Limpiar estado de error
+        }
+    };
 
 // TODO: Arriola Aldo
 // operator <<
@@ -210,6 +221,7 @@ ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
 template <typename Traits>
 istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
     // Leer el arbol
+    obj.Read(is);
     return is;
 }
 
