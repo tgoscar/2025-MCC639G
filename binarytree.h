@@ -9,13 +9,13 @@ using namespace std;
 
 
 template <typename Traits>
-class NodeBinaryTree{
+class CBinaryTreeNode{
 public:
   // TODO: Change T by KeyNode
   // TODO: Segura Alex (typedef -> using)
   typedef typename Traits::T          value_type;
 private:
-  typedef NodeBinaryTree<T> Node;
+  typedef CBinaryTreeNode<T> Node;
   public:
     T       m_data;
     Node *  m_pParent = nullptr;
@@ -23,7 +23,7 @@ private:
     vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
   public:
     // TODO: Fuentes Patrick (revisar que el Ref llegue bien)
-    NodeBinaryTree(Node *pParent, T data, Ref ref = nullptr, Node *p1 = nullptr) 
+    CBinaryTreeNode(Node *pParent, T data, Ref ref = nullptr, Node *p1 = nullptr) 
         : m_pParent(pParent), m_data(data)
     {   m_pChild[0] = p0;   m_pChild[1] = p1;   }
 
@@ -64,7 +64,7 @@ public:
 template <typename _T>
 struct BinaryTreeAscTraits{
     using  T         = _T;
-    using  Node      = NodeBinaryTree<T>;
+    using  Node      = CBinaryTreeNode<T>;
     using  CompareFn = less<T>;
 };
 
@@ -72,19 +72,19 @@ template <typename _T>
 struct BinaryTreeDescTraits
 {
     using  T         = _T;
-    using  Node      = NodeBinaryTree<T>;
+    using  Node      = CBinaryTreeNode<T>;
     using  CompareFn = greater<T>;
 };
 
 template <typename Traits>
-class BinaryTree{
+class CBinaryTree{
   public:
     // TODO: Segura Alex
     typedef typename Traits::T          value_type;
     typedef typename Traits::Node       Node;
     
     typedef typename Traits::CompareFn      CompareFn;
-    typedef BinaryTree<Traits>              myself;
+    typedef CBinaryTree<Traits>              myself;
     typedef binary_tree_iterator<myself>    iterator;
 
 protected:
@@ -111,10 +111,10 @@ protected:
     }
 public:
     // TODO: Selis Luis (Move Constructor)
-    BinaryTree(Binary &&other){ }
+    CBinaryTree(Binary &&other){ }
 
     // TODO: Selis Luis (Destructor)
-    virtual ~BinaryTree(){  } 
+    virtual ~CBinaryTree(){  } 
     
     // TODO: Quispe David
     void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
@@ -199,8 +199,8 @@ protected:
 // TODO: Arriola Aldo
 // operator <<
 template <typename Traits>
-ostream & operator<<(ostream &os, BinaryTree<Traits> &obj){
-    os << "BinaryTree with " << obj.size() << " elements.";
+ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
+    os << "CBinaryTree with " << obj.size() << " elements.";
     // Imprimir el larbo inorder
     obj.inorder(os);
     return os;
@@ -208,7 +208,7 @@ ostream & operator<<(ostream &os, BinaryTree<Traits> &obj){
 
 // TODO: Toledo Oscar
 template <typename Traits>
-istream & operator>>(istream &is, BinaryTree<Traits> &obj){
+istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
     // Leer el arbol
     return is;
 }
