@@ -13,9 +13,11 @@ class CBinaryTreeNode{
 public:
   // TODO: Change T by KeyNode
   // TODO: Segura Alex (typedef -> using)
-  typedef typename Traits::T          value_type;
+  //typedef typename Traits::T          value_type;
+  using value_type = typename Traits::T;
 private:
-  typedef CBinaryTreeNode<T> Node;
+  //typedef CBinaryTreeNode<T> Node;
+  using Node = CBinaryTreeNode<T>;
   public:
     T       m_data;
     Node *  m_pParent = nullptr;
