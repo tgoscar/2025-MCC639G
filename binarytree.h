@@ -196,37 +196,52 @@ protected:
     void Read(istream &is)  {
         clear();
         
-        string line1, line2;
+        string line;
         
-        // Leer primera línea
-        if (getline(is, line1)) {
-            // Verificar si es árbol vacío
-            if (line1.find("Empty") != string::npos) {
-                return; // Árbol vacío, nada que leer
-            }
+        // Leer y ignorar la primera línea descriptiva
+        getline(is, line);  // "CBinaryTree with X elements."
+        
+        // Si el árbol está vacío, terminar
+        if (line.find("Empty") != string::npos) {
+            return;
+        }
+        
+        // Leer TODAS las líneas restantes en PRE-ORDEN
+        // Reconstruir el árbol exactamente como estaba
+        ReadPreOrderRecursive(is, nullptr, m_pRoot);
+    }
+    
+    private:
+    void ReadPreOrderRecursive(istream &is, Node *pParent, Node *&rpNode) {
+        string line;
+        
+        // Leer una línea del stream
+        if (getline(is, line)) {
+            stringstream ss(line);
+            string token;
+            value_type elem;
             
-            // Leer segunda línea con elementos
-            if (getline(is, line2)) {
-                stringstream ss(line2);
-                string token;
-                value_type elem;
-                
-                while (ss >> token) {
-                    if (token == "-->") {
-                        // Leer el elemento después de "-->"
-                        if (ss >> elem) {
-                            insert(elem, nullptr);
-                        }
-                    } else {
-                        // Intentar convertir token directo a elemento
-                        stringstream token_ss(token);
-                        if (token_ss >> elem) {
-                            insert(elem, nullptr);
-                        }
+            // Buscar el patrón " --> elemento" en la línea
+            while (ss >> token) {
+                if (token == "-->") {
+                    if (ss >> elem) {
+                        // Crear el nodo actual (raíz del subárbol)
+                        rpNode = CreateNode(pParent, elem, nullptr);
+                        m_size++;
+                        
+                        // Reconstruir recursivamente subárbol izquierdo
+                        ReadPreOrderRecursive(is, rpNode, rpNode->getChildRef(0));
+                        
+                        // Reconstruir recursivamente subárbol derecho
+                        ReadPreOrderRecursive(is, rpNode, rpNode->getChildRef(1));
+                        return;
                     }
                 }
             }
         }
+        
+        // Si no se encontró un elemento, este nodo es nulo
+        rpNode = nullptr;
     };
 
 // TODO: Arriola Aldo
