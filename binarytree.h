@@ -37,25 +37,18 @@ public:
     Node    * getParent() { return m_pParent;   }
 };
 
-// TODO: Segura Alex (Eliminar esta macro)
-#define _DEF(_Container, _iter)  \
-public: \
-    typedef class general_iterator<_Container, _iter<Container> > Parent;     \
-    typedef typename _Container::Node                             Node;       \
-    typedef _iter<_Container>                                     myself;
-
 template <typename Container>
 class binary_tree_iterator : public general_iterator<Container,  class binary_tree_iterator<Container> > // 
 {  
 public:
     using Parent = class general_iterator<Container, binary_tree_iterator<Container> >;     \
     using Node   = typename Container::Node;
-    using myself = binary_tree_iterator<Container>;
+    using Container = binary_tree_iterator<Container>;
 
   public:
     binary_tree_iterator(Container *pContainer, Node *pNode) : Parent (pContainer,pNode) {}
-    binary_tree_iterator(myself &other)  : Parent (other) {}
-    binary_tree_iterator(myself &&other) : Parent(other) {} // Move constructor C++11 en adelante
+    binary_tree_iterator(Container &other)  : Parent (other) {}
+    binary_tree_iterator(Container &&other) : Parent(other) {} // Move constructor C++11 en adelante
 
 public:
     // TODO: Fuentes Patrick
@@ -83,12 +76,12 @@ template <typename Traits>
 class CBinaryTree{
   public:
     // TODO: Segura Alex
-    typedef typename Traits::T          value_type;
-    typedef typename Traits::Node       Node;
+    using value_type    = typename Traits::T;
+    using Node          = typename Traits::Node;
     
-    typedef typename Traits::CompareFn      CompareFn;
-    typedef CBinaryTree<Traits>              myself;
-    typedef binary_tree_iterator<myself>    iterator;
+    using CompareFn     = typename Traits::CompareFn;
+    using Container     = CBinaryTree<Traits>;
+    using iterator      = binary_tree_iterator<Container>;
 
 protected:
     Node    *m_pRoot = nullptr;
