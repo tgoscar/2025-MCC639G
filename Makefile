@@ -1,14 +1,13 @@
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g -pthread # Añadido -pthread
-LDFLAGS = -pthread # Añadido -pthread
+CXXFLAGS = -std=c++17 -Wall -g -pthread
+LDFLAGS = -pthread
 
 TARGET = main
 SRCS = main.cpp \
-	   test.cpp  util.cpp \
-	   clasestemplate.cpp \
-	   pointers.cpp \
-	   ContainersDemo.cpp \
-	   vector.cpp
+       test.cpp util.cpp \
+       clasestemplate.cpp \
+       pointers.cpp \
+       ContainersDemo.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 all: $(TARGET)

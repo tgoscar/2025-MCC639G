@@ -3,6 +3,7 @@
 //#include <utility>
 //#include <algorithm>
 #include <cassert>
+#include <vector>
 #include "types.h"
 //#include "util.h"
 using namespace std;
@@ -12,25 +13,25 @@ template <typename Traits>
 class CBinaryTreeNode{
 public:
   // TODO: Change T by KeyNode
-  using value_type = typename Traits::T;
-  using Node = CBinaryTreeNode<T>;
+  using value_type = typename Traits::value_type;
+  using Node = CBinaryTreeNode<Traits>;
 
 private:
-    T       m_data;
+    value_type       m_data;
     Node *  m_pParent = nullptr;
     Ref     m_ref;
     vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
 public:
-    CBinaryTreeNode(Node* pParent, KeyNode data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
-        : m_pParent(pParent), m_data(data), m_ref(ref)
+    CBinaryTreeNode(Node* pParent, value_type data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
+        : m_data(data), m_pParent(pParent), m_ref(ref)
     {
         m_pChild[0] = p0;
         m_pChild[1] = p1;
     }
 
     // TODO: Keynode 
-    T         getData()                {   return m_data;    }
-    T        &getDataRef()             {   return m_data;    }
+    value_type         getData()                {   return m_data;    }
+    value_type        &getDataRef()             {   return m_data;    }
  
  // TODO: review if these functions must remain public/private
     void      setpChild(const Node *pChild, size_t pos)  {   m_pChild[pos] = pChild;  }
@@ -39,61 +40,77 @@ public:
     Node    * getParent() { return m_pParent;   }
 };
 
+// TODO: Implement binary_tree_iterator properly
+// For now, commenting out incomplete iterator implementation
+/*
 template <typename Container>
-class binary_tree_iterator : public general_iterator<Container,  class binary_tree_iterator<Container> > // 
-{  
+class binary_tree_iterator {  
 public:
-    using Parent = class general_iterator<Container, binary_tree_iterator<Container> >;     \
     using Node   = typename Container::Node;
-    using Container = binary_tree_iterator<Container>;
+    using value_type = typename Container::value_type;
 
-  public:
-    binary_tree_iterator(Container *pContainer, Node *pNode) : Parent (pContainer,pNode) {}
-    binary_tree_iterator(Container &other)  : Parent (other) {}
-    binary_tree_iterator(Container &&other) : Parent(other) {} // Move constructor C++11 en adelante
+private:
+    Container *m_pContainer = nullptr;
+    Node      *m_pNode = nullptr;
 
 public:
-    // TODO: Fuentes Patrick
+    binary_tree_iterator(Container *pContainer, Node *pNode) 
+        : m_pContainer(pContainer), m_pNode(pNode) {}
+    binary_tree_iterator(binary_tree_iterator &other)  
+        : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode) {}
+    binary_tree_iterator(binary_tree_iterator &&other) 
+        : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode) {}
+
+public:
+    // TODO: Fuentes Patrick - implement proper tree traversal
     binary_tree_iterator operator++() {
-        Parent::m_pNode = Parent::m_pNode ? (Node*)Parent::m_pNode->getpNext() : nullptr;
+        // TODO: implement in-order traversal
+        m_pNode = nullptr;
         return *this;
     }
+    
+    bool operator==(binary_tree_iterator other){ 
+        return m_pContainer == other.m_pContainer && m_pNode == other.m_pNode; 
+    }
+    bool operator!=(binary_tree_iterator other){ return !(*this == other); }
+    value_type &operator*(){    return m_pNode->getDataRef();   }
 };
+*/
 
 template <typename _T>
 struct BinaryTreeAscTraits{
-    using  T         = _T;
-    using  Node      = CBinaryTreeNode<T>;
-    using  CompareFn = less<T>;
+    using  value_type = _T;
+    using  Node       = CBinaryTreeNode<BinaryTreeAscTraits<_T>>;
+    using  Func       = less<value_type>;
 };
 
 template <typename _T>
 struct BinaryTreeDescTraits
 {
-    using  T         = _T;
-    using  Node      = CBinaryTreeNode<T>;
-    using  CompareFn = greater<T>;
+    using  value_type = _T;
+    using  Node       = CBinaryTreeNode<BinaryTreeDescTraits<_T>>;
+    using  Func       = greater<value_type>;
 };
 
 template <typename Traits>
 class CBinaryTree{
   public:
-    using value_type    = typename Traits::T;
-    using Node          = typename Traits::Node;
+    using value_type    = typename Traits::value_type;
+    using Node          = CBinaryTreeNode<Traits>;
     
-    using CompareFn     = typename Traits::CompareFn;
+    using Func          = typename Traits::Func;
     using Container     = CBinaryTree<Traits>;
-    using iterator      = binary_tree_iterator<Container>;
+    // using iterator      = binary_tree_iterator<Container>; // TODO: uncomment when iterator is implemented
 
 protected:
     Node    *m_pRoot = nullptr;
     size_t   m_size  = 0;
-    CompareFn Compfn;
+    Func Compfn;
 public: 
     size_t  size()  const       { return m_size;       }
     bool    empty() const       { return size() == 0;  }
     // TODO: insert must receive two paramaters: elem and LinkedValueType value
-    virtual void insert(value_type elem, Ref ref) {
+    virtual void insert(value_type &elem, Ref ref) {
         m_pRoot = internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
     }
 
@@ -101,7 +118,7 @@ protected:
     Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
         return new Node(pParent, elem, ref);
     }
-    Node* internal_insert(value_type elem, Ref ref, LinkedValueType value,
+    Node* internal_insert(value_type &elem, Ref ref, void* value,
                           Node* pParent, Node*& rpOrigin)
     {
         if (!rpOrigin) {
@@ -113,10 +130,12 @@ protected:
         return internal_insert(elem, ref, nullptr, rpOrigin, rpOrigin->getChildRef(branch));
     }
 public:
-    // TODO: Selis Luis (Copy Constructor)
-    CBinaryTree(Binary &other);
+    CBinaryTree() = default;
     
-    CBinaryTree(Binary &&other)
+    // TODO: Selis Luis (Copy Constructor)
+    CBinaryTree(Container &other);
+    
+    CBinaryTree(Container &&other)
         : m_pRoot(std::move(other.m_pRoot)), 
           m_size (std::move(other.m_size)), 
           Compfn (std::move(other.Compfn))
@@ -180,7 +199,7 @@ public:
         if( pNode ){
             Node *pParent = pNode->getParent();
             print(pNode->getChild(1), level+1, os);
-            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
+            os << string(level * 3, ' ') << " | " << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
             print(pNode->getChild(0), level+1, os);
         }
     }

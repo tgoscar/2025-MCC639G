@@ -1,6 +1,7 @@
 #ifndef __FOREACH_H__
 #define __FOREACH_H__
 #include <iostream>
+#include <functional>
 
 template <typename Iterator, typename Function >
 void foreach(Iterator begin, Iterator end, Function func){
@@ -52,7 +53,7 @@ decltype(auto) call(Callable op, Args&&... args)
     }
     else // return type is not void:
     { auto ret = invoke(forward<Callable>(op), forward<Args>(args)...);
-      std::cout << "Function is returning: " << type_name<decltype(ret)>() << endl;
+      std::cout << "Function is returning: non-void" << endl;
       //...  // do something (with ret) before we return
       return ret;
     }

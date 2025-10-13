@@ -1,0 +1,25 @@
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run C++ App"
+
+[[workflows.workflow]]
+name = "Run C++ App"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "make clean && make && ./main"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[agent]
+expertMode = true
