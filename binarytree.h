@@ -111,7 +111,7 @@ public:
     bool    empty() const       { return size() == 0;  }
     // TODO: insert must receive two paramaters: elem and LinkedValueType value
     virtual void insert(value_type &elem, Ref ref) {
-        m_pRoot = internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
+        internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
     }
 
 protected:
@@ -145,14 +145,14 @@ public:
     virtual ~CBinaryTree(){  } 
     
     // TODO: Quispe David
-        void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
+        void inorder  (ostream &os)    {   inorder  (m_pRoot, 0, os);  }
     // TODO: Quispe David
-    void inorder(Node  *pNode, ostream &os, size_t level){
+    void inorder(Node  *pNode, size_t level, ostream &os){
         if( pNode ){
             //Node *pParent = pNode->getParent();
-            inorder(pNode->getChild(0), os, level+1);
+            inorder(pNode->getChild(0), level+1, os);
             os << " --> " << pNode->getDataRef();
-            inorder(pNode->getChild(1), os, level+1);
+            inorder(pNode->getChild(1), level+1, os);
         }
     }
 
@@ -230,8 +230,8 @@ public:
 // operator <<
 template <typename Traits>
 ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
-    os << "CBinaryTree with " << obj.size() << " elements.";
-    obj.preorder(os);
+    os << "CBinaryTree with " << obj.size() << " elements." << endl;
+    obj.print(os);
     return os;
 }
 
