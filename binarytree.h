@@ -180,7 +180,7 @@ public:
         }
     }
     // TODO: Villanueva Richard
-    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
+    void preorder (ostream &os)    {   preorder (m_pRoot, 0, os);  }
     // TODO: Generalize this function by using iterators and apply any function
     // Create a new iterator to walk in postorder
     // TODO: Villanueva Richard
@@ -231,7 +231,7 @@ public:
 template <typename Traits>
 ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
     os << "CBinaryTree with " << obj.size() << " elements.";
-    obj.inorder(os);
+    obj.preorder(os);
     return os;
 }
 
