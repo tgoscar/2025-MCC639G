@@ -109,16 +109,19 @@ public:
     } 
     
     // Limpia el árbol en postorden
-    template <typename Function, typename... Args>
-    void postorder(Function func, Args const&... args)
-    {    postorder(m_pRoot, 0, func, args...);}
-
-    template <typename Function,typename... Args>
-    void postorder(Node* pNode, size_t level, Function func, Args const&... args) {
+    // Wrapper simple: solo recibe el functor
+    template <typename Function>
+    void postorder(Function func) {
+        postorder_impl(m_pRoot, 0, func);
+    }
+    
+    // Implementación recursiva con nombre distinto (evita choque de sobrecargas)
+    template <typename Function>
+    void postorder_impl(Node* pNode, size_t level, Function func) {
         if (pNode) {
-            postorder(pNode->getChild(0), level + 1, func, args...);
-            postorder(pNode->getChild(1), level + 1, func, args...);
-            func(pNode, level); 
+            postorder_impl(pNode->getChild(0), level + 1, func);
+            postorder_impl(pNode->getChild(1), level + 1, func);
+            func(pNode, level);
         }
     }
 
