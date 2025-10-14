@@ -25,6 +25,8 @@ using namespace std;
 // Forma #2 de Compilar (requiere el archivo Makefile)
 // make
 
+bt.PrintVertical();   // usa el nombre real de tu objeto árbol
+
 int main(){
     cout << "Hello EDA - MCC639G" <<endl;
     // DemoTest();
