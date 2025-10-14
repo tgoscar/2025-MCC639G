@@ -1,18 +1,15 @@
 #ifndef __BINARY_TREE_H__  
 #define __BINARY_TREE_H__ 
-//#include <utility>
-//#include <algorithm>
 #include <cassert>
 #include <vector>
+#include <sstream>
 #include "types.h"
-//#include "util.h"
 using namespace std;
 
 
 template <typename Traits>
 class CBinaryTreeNode{
 public:
-  // TODO: Change T by KeyNode
   using value_type = typename Traits::value_type;
   using Node = CBinaryTreeNode<Traits>;
 
@@ -20,7 +17,7 @@ private:
     value_type       m_data;
     Node *  m_pParent = nullptr;
     Ref     m_ref;
-    vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
+    vector<Node *> m_pChild = {nullptr, nullptr};
 public:
     CBinaryTreeNode(Node* pParent, value_type data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
         : m_data(data), m_pParent(pParent), m_ref(ref)
@@ -29,53 +26,16 @@ public:
         m_pChild[1] = p1;
     }
 
-    // TODO: Keynode 
     value_type         getData()                {   return m_data;    }
     value_type        &getDataRef()             {   return m_data;    }
+    const value_type&  getDataRef() const       {   return m_data;    } // Added const version
  
- // TODO: review if these functions must remain public/private
-    void      setpChild(const Node *pChild, size_t pos)  {   m_pChild[pos] = pChild;  }
-    Node    * getChild(size_t branch){ return m_pChild[branch];  }
+    void      setpChild(Node *pChild, size_t pos)  {   m_pChild[pos] = pChild;  }
+    Node    * getChild(size_t branch) const { return m_pChild[branch];  }
     Node    *&getChildRef(size_t branch){ return m_pChild[branch];  }
     Node    * getParent() { return m_pParent;   }
+    const Ref& getRef() const { return m_ref; } // Added getter for ref
 };
-
-// TODO: Implement binary_tree_iterator properly
-// For now, commenting out incomplete iterator implementation
-/*
-template <typename Container>
-class binary_tree_iterator {  
-public:
-    using Node   = typename Container::Node;
-    using value_type = typename Container::value_type;
-
-private:
-    Container *m_pContainer = nullptr;
-    Node      *m_pNode = nullptr;
-
-public:
-    binary_tree_iterator(Container *pContainer, Node *pNode) 
-        : m_pContainer(pContainer), m_pNode(pNode) {}
-    binary_tree_iterator(binary_tree_iterator &other)  
-        : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode) {}
-    binary_tree_iterator(binary_tree_iterator &&other) 
-        : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode) {}
-
-public:
-    // TODO: Fuentes Patrick - implement proper tree traversal
-    binary_tree_iterator operator++() {
-        // TODO: implement in-order traversal
-        m_pNode = nullptr;
-        return *this;
-    }
-    
-    bool operator==(binary_tree_iterator other){ 
-        return m_pContainer == other.m_pContainer && m_pNode == other.m_pNode; 
-    }
-    bool operator!=(binary_tree_iterator other){ return !(*this == other); }
-    value_type &operator*(){    return m_pNode->getDataRef();   }
-};
-*/
 
 template <typename _T>
 struct BinaryTreeAscTraits{
@@ -100,16 +60,16 @@ class CBinaryTree{
     
     using Func          = typename Traits::Func;
     using Container     = CBinaryTree<Traits>;
-    // using iterator      = binary_tree_iterator<Container>; // TODO: uncomment when iterator is implemented
 
 protected:
     Node    *m_pRoot = nullptr;
     size_t   m_size  = 0;
     Func Compfn;
+    
 public: 
     size_t  size()  const       { return m_size;       }
     bool    empty() const       { return size() == 0;  }
-    // TODO: insert must receive two paramaters: elem and LinkedValueType value
+    
     virtual void insert(value_type &elem, Ref ref) {
         internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
     }
@@ -118,6 +78,7 @@ protected:
     Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
         return new Node(pParent, elem, ref);
     }
+    
     Node* internal_insert(value_type &elem, Ref ref, void* value,
                           Node* pParent, Node*& rpOrigin)
     {
@@ -129,11 +90,11 @@ protected:
         size_t branch = Compfn(elem, rpOrigin->getDataRef()) ? 0 : 1;
         return internal_insert(elem, ref, nullptr, rpOrigin, rpOrigin->getChildRef(branch));
     }
+
 public:
     CBinaryTree() = default;
     
-    // TODO: Selis Luis (Copy Constructor)
-    CBinaryTree(Container &other);
+    CBinaryTree(Container &other); // TODO: Selis Luis (Copy Constructor)
     
     CBinaryTree(Container &&other)
         : m_pRoot(std::move(other.m_pRoot)), 
@@ -141,23 +102,29 @@ public:
           Compfn (std::move(other.Compfn))
     { }
 
-    // TODO: Selis Luis (Destructor)
-    virtual ~CBinaryTree(){  } 
+    virtual ~CBinaryTree(){  
+        clear(); // Added clear in destructor
+    } 
     
-    // TODO: Quispe David
-        void inorder  (ostream &os)    {   inorder  (m_pRoot, 0, os);  }
-    // TODO: Quispe David
+    // Método auxiliar para limpiar el árbol
+    void clear() {
+        postorder([](Node* node, size_t) {
+            delete node;
+        });
+        m_pRoot = nullptr;
+        m_size = 0;
+    }
+    
+    void inorder  (ostream &os)    {   inorder  (m_pRoot, 0, os);  }
+    
     void inorder(Node  *pNode, size_t level, ostream &os){
         if( pNode ){
-            //Node *pParent = pNode->getParent();
             inorder(pNode->getChild(0), level+1, os);
             os << " --> " << pNode->getDataRef();
             inorder(pNode->getChild(1), level+1, os);
         }
     }
 
-    // TODO: generalize this function by using iterators and apply any function
-    // TODO: Quispe David
     void inorder(Node  *pNode, void (*visit) (value_type& item)){
         if( pNode ){   
             inorder(pNode->getChild(0), *visit);
@@ -166,7 +133,6 @@ public:
         }
     }
 
-    // Variadic templates (See foreach.h)
     template <typename Function, typename... Args>
     void postorder(Function func, Args const&... args)
     {    postorder(m_pRoot, 0, func, args...);}
@@ -179,13 +145,10 @@ public:
             func(pNode, level); 
         }
     }
-    // TODO: Villanueva Richard
+    
     void preorder (ostream &os)    {   preorder (m_pRoot, 0, os);  }
-    // TODO: Generalize this function by using iterators and apply any function
-    // Create a new iterator to walk in postorder
-    // TODO: Villanueva Richard
+    
     void preorder(Node  *pNode, size_t level, ostream &os){
-        //foreach(preorderbegin(), preorderend(), fn)
         if( pNode ){   
             os << " --> " << pNode->getDataRef();
             preorder(pNode->getChild(0), level+1, os);
@@ -194,7 +157,7 @@ public:
     }
 
     void print    (ostream &os)    {   print    (m_pRoot, 0, os);  }
-    // TODO: generalize this function by using iterators and apply any function
+    
     void print(Node  *pNode, size_t level, ostream &os){
         if( pNode ){
             Node *pParent = pNode->getParent();
@@ -204,14 +167,7 @@ public:
         }
     }
 
-    // TODO: Open question for everyone
-    // Generalizar el recorrido para recibir cualquier funcion
-    // con una cantidad flexible de parametros conm variadic templates
-    // https://en.cppreference.com/w/cpp/language/parameter_packs
-    
-    // TODO: Alcazar Joseph
     void postorder(Node  *pNode, size_t level, ostream &os){
-        //foreach(postorderbegin(), postorderend(), fn)
         if( pNode ){   
             postorder(pNode->getChild(0), level+1, os);
             postorder(pNode->getChild(1), level+1, os);
@@ -220,10 +176,102 @@ public:
     }
 
     // TODO: Arriola Aldo
-    void Write(ostream &os) { os << *this;  }
+    void Write(ostream &os) { 
+        os << *this;  
+    }
 
     // TODO: Toledo Oscar
-    void Read(istream &is)  { /* TODO */  }
+    void Read(istream &is)  { 
+        clear(); // Limpiar el árbol actual antes de leer
+        
+        size_t elementCount;
+        is >> elementCount;
+        
+        if (elementCount > 0) {
+            // Usar preorder para reconstruir la estructura exacta del árbol
+            std::vector<std::pair<value_type, Ref>> elements;
+            elements.reserve(elementCount);
+            
+            for (size_t i = 0; i < elementCount; ++i) {
+                value_type data;
+                Ref ref;
+                
+                // Leer datos y referencia
+                is >> data;
+                is.read(reinterpret_cast<char*>(&ref), sizeof(Ref));
+                
+                elements.emplace_back(data, ref);
+            }
+            
+            // Reconstruir el árbol en preorder
+            size_t index = 0;
+            m_pRoot = internalReadPreorder(is, nullptr, elements, index);
+            m_size = elementCount;
+        }
+    }
+
+private:
+    Node* internalReadPreorder(istream& is, Node* parent, 
+                              const std::vector<std::pair<value_type, Ref>>& elements, 
+                              size_t& index) {
+        if (index >= elements.size()) return nullptr;
+        
+        // Crear nodo actual (preorder: raíz primero)
+        auto [data, ref] = elements[index++];
+        Node* newNode = CreateNode(parent, data, ref);
+        
+        // Leer hijos (preorder continúa con subárbol izquierdo y luego derecho)
+        newNode->getChildRef(0) = internalReadPreorder(is, newNode, elements, index);
+        newNode->getChildRef(1) = internalReadPreorder(is, newNode, elements, index);
+        
+        return newNode;
+    }
+
+public:
+    void writePreorder(ostream &os) const {
+        // Escribir cantidad de elementos primero
+        os << m_size << "\n";
+        
+        if (m_pRoot) {
+            internalWritePreorder(m_pRoot, os);
+        }
+    }
+
+private:
+    void internalWritePreorder(Node* node, ostream &os) const {
+        if (!node) return;
+        
+        // Escribir datos del nodo actual (preorder: raíz primero)
+        os << node->getDataRef() << " ";
+        os.write(reinterpret_cast<const char*>(&node->getRef()), sizeof(Ref));
+        os << " ";
+        
+        // Escribir hijos (preorder continúa con subárbol izquierdo y luego derecho)
+        internalWritePreorder(node->getChild(0), os);
+        internalWritePreorder(node->getChild(1), os);
+    }
+
+public:
+    // Versión alternativa más simple si solo necesitas los datos
+    void writePreorderSimple(ostream &os) const {
+        internalWritePreorderSimple(m_pRoot, os);
+        os << endl;
+    }
+
+private:
+    void internalWritePreorderSimple(Node* node, ostream &os) const {
+        if (!node) {
+            os << "# "; // Marcador para nodo nulo
+            return;
+        }
+        
+        // Escribir datos del nodo actual
+        os << node->getDataRef() << " ";
+        
+        // Escribir hijos
+        internalWritePreorderSimple(node->getChild(0), os);
+        internalWritePreorderSimple(node->getChild(1), os);
+    }
 };
 
 // TODO: Arriola Aldo
@@ -231,14 +279,16 @@ public:
 template <typename Traits>
 ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
     os << "CBinaryTree with " << obj.size() << " elements." << endl;
-    obj.print(os);
+    
+    // Usar preorder para escribir manteniendo la estructura del árbol
+    obj.writePreorder(os);
     return os;
 }
 
 // TODO: Toledo Oscar
 template <typename Traits>
 istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
-    // Leer el arbol
+    obj.Read(is);
     return is;
 }
 
