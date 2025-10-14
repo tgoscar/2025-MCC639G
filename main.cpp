@@ -25,10 +25,8 @@ using namespace std;
 // Forma #2 de Compilar (requiere el archivo Makefile)
 // make
 
-bt.PrintVertical();   // usa el nombre real de tu objeto árbol
-
 int main(){
-    cout << "Hello EDA - MCC639G" <<endl;
+    cout << "Hello EDA - MCC639G" << endl;
     // DemoTest();
     // DemoUtil();
     // DemoClasesTemplate();
@@ -38,6 +36,6 @@ int main(){
     
     DemoLinkedList();
     DemoDoubleLinkedList();
-    DemoBinaryTree();
+    DemoBinaryTree();   // <-- dentro de este demo puedes llamar PrintVertical()
     return 0;
 }
