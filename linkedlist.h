@@ -1,200 +1,227 @@
-#ifndef __LINKEDLIST_H__
-#define __LINKEDLIST_H__
-#include <iostream>
-#include "types.h"
-#include <mutex>
+#ifndef LINKEDLIST_H
+#define LINKEDLIST_H
 
+#include <cstddef>
+#include <iterator>
+#include <type_traits>
+#include <functional>
+#include <ostream>
+#include <utility>
+#include <stdexcept>
 
-template <typename T, typename _Func>
-struct LLinkedListTraits{
-    using value_type = T;
-    using Func       = _Func;
+/* ============================================================
+ *  Deducción de tipos desde Traits
+ *    - trait_value_type<Trait>::type -> T
+ *    - trait_less<Trait, T>::type    -> comparador (por defecto std::less<T>)
+ * ============================================================ */
+template <typename Trait, typename = void>
+struct trait_value_type {};
+
+template <typename Trait>
+struct trait_value_type<Trait, std::void_t<typename Trait::type>> {
+    using type = typename Trait::type;
 };
 
-template <typename T>
-struct LLinkedListAsc : 
-    public LLinkedListTraits<T, std::less<T> >{
+template <typename Trait>
+struct trait_value_type<Trait, std::void_t<typename Trait::ValueType>> {
+    using type = typename Trait::ValueType;
 };
 
-template <typename T>
-struct LLinkedListDesc : 
-    public LLinkedListTraits<T, std::greater<T> >{
+template <typename Trait>
+struct trait_value_type<Trait, std::void_t<typename Trait::T>> {
+    using type = typename Trait::T;
 };
 
+template <template<class> class TraitTmpl, class U>
+struct trait_value_type<TraitTmpl<U>, void> {
+    using type = U;
+};
+
+template <typename Trait, typename T, typename = void>
+struct trait_less { using type = std::less<T>; };
+
+template <typename Trait, typename T>
+struct trait_less<Trait, T, std::void_t<typename Trait::less>> {
+    using type = typename Trait::less;
+};
+
+template <typename Trait, typename T>
+struct trait_less<Trait, T, std::void_t<typename Trait::Less>> {
+    using type = typename Trait::Less;
+};
+
+template <typename Trait, typename T>
+struct trait_less<Trait, T, std::void_t<typename Trait::Compare>> {
+    using type = typename Trait::Compare;
+};
+
+/* ============================================================
+ *  TRAITS que pide linkedlist.cpp
+ *    LLinkedListAsc<T>  -> orden ascendente (std::less)
+ *    LLinkedListDesc<T> -> orden descendente (std::greater)
+ * ============================================================ */
+template <class T>
+struct LLinkedListAsc {
+    using type = T;
+    using less = std::less<T>;
+};
+
+template <class T>
+struct LLinkedListDesc {
+    using type = T;
+    using less = std::greater<T>;
+};
+
+/* ============================================================
+ *  Lista simple con Traits
+ *    - CLinkedList<Traits>
+ *    - Soporta foreach (iteradores) y operator<<
+ *    - Insert(value_type&, Ref) (2 parámetros) se mantiene
+ * ============================================================ */
 template <typename Traits>
-class LLNode{
-private:
-    using    value_type = typename Traits::value_type;
-    using    Node       = LLNode<Traits>;
-    using    MySelf     = LLNode<Traits>;
-    value_type          m_data;
-    Ref      m_ref;
-    Node    *m_pNext = nullptr;
-
+class CLinkedList {
 public:
-    LLNode(value_type &elem, Ref ref, LLNode<Traits> *pNext = nullptr)
-        : m_data(elem), m_ref(ref), m_pNext(pNext){
-    }
-    value_type   GetData()    { return m_data;     }
-    value_type  &GetDataRef() { return m_data;     }
-    Ref    GetRef()     { return m_ref;      }
-    Node * GetNext()    { return m_pNext;    }
-    Node *&GetNextRef() { return m_pNext;    }
-};
-
-// 
-// TODO Activar el iterator
-template <typename Container> // HERE: TTraits -> Container
-class forward_linkedlist_iterator{
- private:
-     using value_type = typename Container::value_type;
-     using Node       = typename Container::Node;
-     using iterator   = forward_linkedlist_iterator<Container>;
-
-     Container *m_pList = nullptr;
-     Node      *m_pNode = nullptr;
- public:
-     forward_linkedlist_iterator(Container *pList, Node *pNode)
-             : m_pList(pList), m_pNode(pNode){}
-     forward_linkedlist_iterator(iterator &other)
-             : m_pList(other.m_pList), m_pNode(other.m_pNode){}   
-     bool operator==(iterator other){ return m_pList == other.m_pList && m_pNode == other.m_pNode; }
-     bool operator!=(iterator other){ return !(*this == other);    }
-
-     iterator operator++(){ 
-         if(m_pNode)
-             m_pNode = m_pNode->GetNext();
-         return *this;
-     }
-     value_type &operator*(){    return m_pNode->GetDataRef();   }
-};
-
-// TODO Agregar control de concurrencia
-
-// TODO Agregar que sea ascendente o descendente con el mismo codigo
-template <typename Traits>
-class CLinkedList{
-public:
-    using value_type = typename Traits::value_type; 
-    using Func       = typename Traits::Func;
-    using Node       = LLNode<Traits>; 
-    using Container  = CLinkedList<Traits>;
-    using iterator   = forward_linkedlist_iterator<Container>;
+    using value_type = typename trait_value_type<Traits>::type;
+    using comparator = typename trait_less<Traits, value_type>::type;
 
 private:
-    Node   *m_pRoot = nullptr;
-    size_t m_nElem = 0;
-    Func   m_fCompare;
-    std::mutex m_mutex;
-public:
-    // Constructor
-    CLinkedList();
-    CLinkedList(CLinkedList &other);
+    struct Node {
+        value_type value;
+        Node* next;
+        explicit Node(const value_type& v, Node* n=nullptr) : value(v), next(n) {}
+    };
 
-    // TODO: Move contructor (leer bibliografia)
-    CLinkedList(CLinkedList &&other);
-
-    // Destructor seguro
-    virtual ~CLinkedList();
-
-    void Insert(value_type &elem, Ref ref);
-
-    // <-- agregado: lectura desde istream
-    void Read(std::istream &is);
-
-private:
-    void InternalInsert(Node *&rParent, value_type &elem, Ref ref);
-    Node *GetRoot()    {    return m_pRoot;     };
+    Node* head_{nullptr};
+    Node* tail_{nullptr};
+    std::size_t size_{0};
+    comparator comp_{};
 
 public:
-    iterator begin(){ return iterator(this, m_pRoot); };
-    iterator end()  { return iterator(this, nullptr); } 
+    CLinkedList() = default;
+    ~CLinkedList() { clear(); }
 
-    friend std::ostream& operator<<(std::ostream &os, CLinkedList<Traits> &obj){
-        auto pRoot = obj.GetRoot();
-        while( pRoot ){
-            os << pRoot->GetData() << "(" << pRoot->GetRef() << ") ";
-            pRoot = pRoot->GetNext();
+    CLinkedList(const CLinkedList&) = delete;
+    CLinkedList& operator=(const CLinkedList&) = delete;
+
+    std::size_t size() const noexcept { return size_; }
+    bool empty() const noexcept { return size_ == 0; }
+
+    void clear() noexcept {
+        Node* cur = head_;
+        while (cur) {
+            Node* nxt = cur->next;
+            delete cur;
+            cur = nxt;
         }
-        return os;
+        head_ = tail_ = nullptr;
+        size_ = 0;
+    }
+
+    /* ------------------------------------------------------------
+     * Insert ordenado por Traits (2 parámetros legacy):
+     *   - elem: valor a insertar (se almacena)
+     *   - ref : referencia/clave auxiliar (compatibilidad; NO se almacena)
+     * ------------------------------------------------------------ */
+    template <typename Ref>
+    void Insert(value_type &elem, Ref /*ref*/) {
+        Node* node = new Node(elem);
+        if (!head_) { // lista vacía
+            head_ = tail_ = node;
+            ++size_;
+            return;
+        }
+        // al inicio
+        if (comp_(elem, head_->value)) {
+            node->next = head_;
+            head_ = node;
+            ++size_;
+            return;
+        }
+        // posición intermedia/final
+        Node* prev = head_;
+        Node* cur  = head_->next;
+        while (cur && !comp_(elem, cur->value)) {
+            prev = cur;
+            cur  = cur->next;
+        }
+        node->next = cur;
+        prev->next = node;
+        if (!cur) tail_ = node;
+        ++size_;
+    }
+
+    /* ------------------------------------------------------------
+     *  Iteradores para foreach (Forward Iterator)
+     * ------------------------------------------------------------ */
+    template <bool IsConst>
+    class __iterator {
+        using node_ptr = std::conditional_t<IsConst, const Node*, Node*>;
+        node_ptr ptr_{nullptr};
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type        = typename CLinkedList::value_type;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = std::conditional_t<IsConst, const value_type*, value_type*>;
+        using reference         = std::conditional_t<IsConst, const value_type&, value_type&>;
+
+        __iterator() = default;
+        explicit __iterator(node_ptr p) : ptr_(p) {}
+
+        // conversión de iterador no-const a const
+        template <bool R = IsConst, typename = std::enable_if_t<R>>
+        __iterator(const __iterator<false>& it) : ptr_(it.ptr_) {}
+
+        reference operator*()  const { return const_cast<reference>(ptr_->value); }
+        pointer   operator->() const { return &const_cast<reference>(ptr_->value); }
+
+        __iterator& operator++()    { if (ptr_) ptr_ = ptr_->next; return *this; }
+        __iterator  operator++(int) { __iterator tmp(*this); ++(*this); return tmp; }
+
+        template <bool R>
+        bool operator==(const __iterator<R>& other) const { return ptr_ == other.ptr_; }
+        template <bool R>
+        bool operator!=(const __iterator<R>& other) const { return !(*this == other); }
+
+        template <typename> friend class CLinkedList;
+    };
+
+    using iterator = __iterator<false>;
+    using const_iterator = __iterator<true>;
+
+    iterator begin() noexcept { return iterator(head_); }
+    iterator end()   noexcept { return iterator(nullptr); }
+    const_iterator begin() const noexcept { return const_iterator(head_); }
+    const_iterator end()   const noexcept { return const_iterator(nullptr); }
+    const_iterator cbegin() const noexcept { return const_iterator(head_); }
+    const_iterator cend()   const noexcept { return const_iterator(nullptr); }
+
+    value_type& front() {
+        if (!head_) throw std::out_of_range("front en lista vacía");
+        return head_->value;
+    }
+    const value_type& front() const {
+        if (!head_) throw std::out_of_range("front en lista vacía");
+        return head_->value;
     }
 };
 
+/* ------------------------------------------------------------
+ *  operator<< para imprimir CLinkedList<Traits>
+ * ------------------------------------------------------------ */
 template <typename Traits>
-void CLinkedList<Traits>::Insert(value_type &elem, Ref ref){
-    // concurrencia: proteger operación de inserción pública
-    std::lock_guard<std::mutex> lg(m_mutex);
-    InternalInsert(m_pRoot, elem, ref);
-}
-
-template <typename Traits>
-void CLinkedList<Traits>::InternalInsert(Node *&rParent, value_type &elem, Ref ref){
-    if( !rParent || m_fCompare(elem, rParent->GetDataRef()) ){
-        rParent = new Node(elem, ref, rParent);
-        return;
+std::ostream& operator<<(std::ostream& os, CLinkedList<Traits>& obj) {
+    bool first = true;
+    for (auto it = obj.begin(); it != obj.end(); ++it) {
+        if (!first) os << ' ';
+        first = false;
+        os << *it;
     }
-    // Tail recursion
-    InternalInsert(rParent->GetNextRef(), elem, ref);
-}
-
-template <typename Traits>
-CLinkedList<Traits>::CLinkedList(CLinkedList &other){
-    // Nota: mantenemos el estilo original y reutilizamos Insert para respetar el orden
-    // y la lógica de comparación definida por Traits::Func (m_fCompare).
-    auto p = other.m_pRoot;
-    while (p){
-        auto val = p->GetDataRef(); // se crea una copia del valor
-        Insert(val, p->GetRef());   // Insert está protegido con mutex y usa InternalInsert
-        p = p->GetNext();
-    }
-}
-
-// Move Constructor
-template <typename Traits>
-CLinkedList<Traits>::CLinkedList(CLinkedList &&other){
-    m_pRoot    = std::move(other.m_pRoot);
-    m_nElem    = std::move(other.m_nElem);
-    m_fCompare = std::move(other.m_fCompare);
-}
-
-template <typename Traits>
-CLinkedList<Traits>::~CLinkedList()
-CLinkedList<Traits>::~CLinkedList()
-{
-    // Destructor seguro: liberar todos los nodos
-    // No es necesario bloquear el mutex aquí (destrucción del propio objeto).
-    auto p = m_pRoot;
-    while (p){
-        auto q = p->GetNext();
-        delete p;
-        p = q;
-    }
-    m_pRoot = nullptr;
-    m_nElem = 0;
-}
-
-// <-- agregado: implementación Read(istream&)
-// Lee pares (value_type, Ref) hasta EOF/entrada inválida e inserta cada uno
-template <typename Traits>
-void CLinkedList<Traits>::Read(std::istream &is){
-    std::lock_guard<std::mutex> lg(m_mutex); // proteger construcción concurrente
-    value_type v;
-    Ref r;
-    while (is >> v >> r){
-        // usar inserción interna porque ya tenemos el lock
-        InternalInsert(m_pRoot, v, r);
-    }
-}
-
-// TODO: Este operador debe quedar fuera de a clase
-template <typename Traits>
-std::ostream &operator<<(std::ostream &os, CLinkedList<Traits> &obj){
-    auto pRoot = obj.GetRoot();
-    while( pRoot )
-        os << pRoot->GetData() << " ";
     return os;
 }
 
+/* ------------------------------------------------------------
+ *  Prototipo para demo (usado por main.cpp)
+ * ------------------------------------------------------------ */
 void DemoLinkedList();
 
-#endif // __LINKEDLIST_H__
+#endif // LINKEDLIST_H
