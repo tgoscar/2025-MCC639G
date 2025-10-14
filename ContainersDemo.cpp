@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <utility> // para std::pair
+
 #include "linkedlist.h"
 #include "doublelinkedlist.h"
 #include "binarytree.h"
@@ -73,6 +74,11 @@ void DemoDoubleLinkedList(){
     foreach(l1.rbegin(), l1.rend(), ::Print<T1>);
 }
 
+template <typename value_type>
+void PrintNode(value_type &data, size_t level, std::ostream &os){
+    os << " -> " << data;
+}
+
 void DemoBinaryTree(){
     std::vector< std::pair<T1, Ref> > v1 = {
         {4, 8}, {2, 5}, {7, 3}, {1, 9}, {5, 2}
@@ -83,24 +89,25 @@ void DemoBinaryTree(){
     std::cout << t1 << std::endl;
 
     std::cout << "Inorder traversal:" << std::endl;
-    // t1.inorder(t1.getRoot(), std::cout, 0);
+    // t1.inorder(::PrintNode<T1>, std::cout);
     std::cout << std::endl;
 
     std::cout << "Preorder traversal:" << std::endl;
-    // t1.preorder(t1.getRoot(), std::cout, 0);
+    // t1.preorder(::PrintNode<T1>, std::cout);
     std::cout << std::endl;
 
     std::cout << "Postorder traversal:" << std::endl;
-    // t1.postorder(t1.getRoot(), std::cout, 0);
+    t1.postorder(::PrintNode<T1>, std::cout);
     std::cout << std::endl;
 
     std::cout << "Tree structure:" << std::endl;
-    // t1.print(t1.getRoot(), std::cout, 0);
-    std::cout << std::endl;
-
-    std::cout << "Inorder traversal using foreach:" << std::endl;
-    // t1.inorder(t1.getRoot(), ::Print<T1>);
+    // t1.inorder(::PrintNode<T1>, std::cout);
     std::cout << std::endl;
 
     // Next classes: AVL, BTree
 }
+
+// TODO: Agregar Demo para AVL
+// Sugerencia: convertir la funcion DemoBinaryTree() en plantilla
+// y luego instanciarla para CBinaryTree y CAVLTree
+
