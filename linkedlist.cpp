@@ -61,7 +61,7 @@ void DemoDoubleLinkedList(){
 
     CDoubleLinkedList< AscendingTrait<T1> > l1;
     for (auto &par : v1)
-        l1.Insert(par.first, par.second);
+        l1.Insert(par.first);
     std::cout << l1 << std::endl;
 
     std::cout << "Imprimiendo con forward iterator" << std::endl;

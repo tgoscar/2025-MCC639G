@@ -1,25 +1,16 @@
-CXX = g++
-CXXFLAGS = -std=c++17 -Wall -g -pthread # Añadido -pthread
-LDFLAGS = -pthread # Añadido -pthread
+CXX := g++
+CXXFLAGS := -std=c++17 -Wall -g -pthread
 
-TARGET = main
-SRCS = main.cpp \
-	   test.cpp  util.cpp \
-	   clasestemplate.cpp \
-	   pointers.cpp \
-	   linkedlist.cpp \
-	   vector.cpp
-OBJS = $(SRCS:.cpp=.o)
+TARGET := main
+OBJS := main.o test.o util.o clasestemplate.o pointers.o linkedlist.o
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(TARGET)
-
-.PHONY: all clean
