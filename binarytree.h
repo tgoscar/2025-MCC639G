@@ -4,6 +4,8 @@
 #include <vector>
 #include <sstream>
 #include "types.h"
+#include <string>
+#include <iomanip>
 using namespace std;
 
 
@@ -12,6 +14,15 @@ class CBinaryTreeNode{
 public:
   using value_type = typename Traits::value_type;
   using Node = CBinaryTreeNode<Traits>;
+
+public:
+  void PrintVertical() const;
+
+private:
+  int height(Node* n) const;
+void buildVerticalCanvas(std::vector<std::string>& canvas,
+                         Node* n, int row, int col, int offset,
+                         int nodeWidth) const;
 
 private:
     value_type       m_data;
