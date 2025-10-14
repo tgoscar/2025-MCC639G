@@ -9,9 +9,9 @@
 #include <algorithm>
 #include <type_traits>
 #include <utility>
+#include <iostream>
 
 using namespace std;
-
 
 template <typename Traits>
 class CBinaryTreeNode{
@@ -19,20 +19,12 @@ public:
   using value_type = typename Traits::value_type;
   using Node = CBinaryTreeNode<Traits>;
 
-public:
-  void PrintVertical() const;
-
-private:
-  int height(Node* n) const;
-void buildVerticalCanvas(std::vector<std::string>& canvas,
-                         Node* n, int row, int col, int offset,
-                         int nodeWidth) const;
-
 private:
     value_type       m_data;
     Node *  m_pParent = nullptr;
     Ref     m_ref;
     vector<Node *> m_pChild = {nullptr, nullptr};
+
 public:
     CBinaryTreeNode(Node* pParent, value_type data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
         : m_data(data), m_pParent(pParent), m_ref(ref)
@@ -94,7 +86,7 @@ protected:
         return new Node(pParent, elem, ref);
     }
     
-    Node* internal_insert(value_type &elem, Ref ref, void* value,
+    Node* internal_insert(value_type &elem, Ref ref, void* /*value*/,
                           Node* pParent, Node*& rpOrigin)
     {
         if (!rpOrigin) {
@@ -287,6 +279,16 @@ private:
         internalWritePreorderSimple(node->getChild(0), os);
         internalWritePreorderSimple(node->getChild(1), os);
     }
+
+public:
+    // ===== Declaraciones de impresión vertical =====
+    void PrintVertical() const;
+
+private:
+    int  height(Node* n) const;
+    void buildVerticalCanvas(std::vector<std::string>& canvas,
+                             Node* n, int row, int col, int offset,
+                             int nodeWidth) const;
 };
 
 // TODO: Arriola Aldo
@@ -294,7 +296,6 @@ private:
 template <typename Traits>
 ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
     os << "CBinaryTree with " << obj.size() << " elements." << endl;
-    
     // Usar preorder para escribir manteniendo la estructura del árbol
     obj.writePreorder(os);
     return os;
@@ -308,21 +309,23 @@ istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
 }
 
 // ====== Impresión vertical tipo diagrama con / y \ (header-only) ======
-inline int BinaryTree::height(Node* n) const {
+template <typename Traits>
+inline int CBinaryTree<Traits>::height(Node* n) const {
     if (!n) return -1;
-    int hl = height(n->left);
-    int hr = height(n->right);
+    int hl = height(n->getChild(0));
+    int hr = height(n->getChild(1));
     return (hl > hr ? hl : hr) + 1;
 }
 
-inline void BinaryTree::buildVerticalCanvas(std::vector<std::string>& canvas,
-                                            Node* n, int row, int col, int offset,
-                                            int nodeWidth) const {
+template <typename Traits>
+inline void CBinaryTree<Traits>::buildVerticalCanvas(std::vector<std::string>& canvas,
+                                                     Node* n, int row, int col, int offset,
+                                                     int nodeWidth) const {
     if (!n) return;
 
     // --- 1) Escribir el valor centrado en nodeWidth ---
     std::ostringstream oss;
-    oss << n->value;              // ⚠️ Si tu campo NO se llama 'value', cambia por 'data' o 'key'
+    oss << n->getDataRef();
     std::string val = oss.str();
 
     int start = col - (nodeWidth / 2);
@@ -339,7 +342,7 @@ inline void BinaryTree::buildVerticalCanvas(std::vector<std::string>& canvas,
     }
 
     // --- 2) Conector izquierdo y recursión ---
-    if (n->left) {
+    if (n->getChild(0)) {
         int childCol = col - offset;
         int slashCol = (col + childCol) / 2;
         if (row + 1 < (int)canvas.size() &&
@@ -347,11 +350,11 @@ inline void BinaryTree::buildVerticalCanvas(std::vector<std::string>& canvas,
             canvas[row + 1][slashCol] = '/';
         }
         int nextOffset = std::max(1, offset / 2);
-        buildVerticalCanvas(canvas, n->left, row + 2, childCol, nextOffset, nodeWidth);
+        buildVerticalCanvas(canvas, n->getChild(0), row + 2, childCol, nextOffset, nodeWidth);
     }
 
     // --- 3) Conector derecho y recursión ---
-    if (n->right) {
+    if (n->getChild(1)) {
         int childCol = col + offset;
         int slashCol = (col + childCol) / 2;
         if (row + 1 < (int)canvas.size() &&
@@ -359,21 +362,21 @@ inline void BinaryTree::buildVerticalCanvas(std::vector<std::string>& canvas,
             canvas[row + 1][slashCol] = '\\';
         }
         int nextOffset = std::max(1, offset / 2);
-        buildVerticalCanvas(canvas, n->right, row + 2, childCol, nextOffset, nodeWidth);
+        buildVerticalCanvas(canvas, n->getChild(1), row + 2, childCol, nextOffset, nodeWidth);
     }
 }
 
-inline void BinaryTree::PrintVertical() const {
-    if (!root) {                  // ⚠️ Si tu puntero raíz NO se llama 'root', cámbialo aquí
+template <typename Traits>
+inline void CBinaryTree<Traits>::PrintVertical() const {
+    if (!m_pRoot) {
         std::cout << "(árbol vacío)\n";
         return;
     }
 
-    // Altura y dimensiones del lienzo (canvas)
-    int h = height(root);
+    int h = height(m_pRoot);
     int rows = 2 * h + 1;
 
-    const int nodeWidth = 3;      // Sube a 4/5 si tus valores son anchos (3 dígitos+)
+    const int nodeWidth = 3;             // sube a 4/5 si tus números son anchos
     int baseCols = (1 << (h + 1)) - 1;   // 2^(h+1) - 1
     int cols = baseCols * nodeWidth;
 
@@ -384,9 +387,8 @@ inline void BinaryTree::PrintVertical() const {
     if (cellOffset < 1) cellOffset = 1;
     int pixelOffset = cellOffset * nodeWidth;
 
-    buildVerticalCanvas(canvas, root, 0, rootCol, pixelOffset, nodeWidth);
+    buildVerticalCanvas(canvas, m_pRoot, 0, rootCol, pixelOffset, nodeWidth);
 
-    // Imprimir con rtrim de espacios
     for (auto& line : canvas) {
         int end = (int)line.size() - 1;
         while (end >= 0 && line[end] == ' ') --end;
@@ -395,7 +397,6 @@ inline void BinaryTree::PrintVertical() const {
     }
 }
 // ====== Fin impresión vertical ======
-
 
 void DemoBinaryTree();
 
