@@ -19,12 +19,10 @@ using namespace std;
 enum bt_ErrorCode {bt_ok, bt_overflow, bt_underflow, bt_duplicate, bt_nofound, bt_rootmerged};
 
 template <typename Container, typename ObjType>
-size_t binary_search(Container& container, size_t first, size_t last, ObjType &object)
-{
+size_t binary_search(Container& container, size_t first, size_t last, ObjType &object){
        if( first >= last )
                return first;
-       while( first < last )
-       {
+       while( first < last ){
                size_t mid = (first+last)/2;
                if( object == (ObjType)container[mid ] )
                        return mid;
@@ -41,8 +39,7 @@ size_t binary_search(Container& container, size_t first, size_t last, ObjType &o
 // Error al poner size_t
 // Posible motivo: El i está disminuyendo
 template <typename Container, typename ObjType>
-void insert_at(Container& container, ObjType object, int pos)
-{
+void insert_at(Container& container, ObjType object, int pos){
         // TODO: #5 replace int, long by types such as size_t
        size_t size = container.size();
        for(int i = size-2 ; i >= pos ; i--)
@@ -51,8 +48,7 @@ void insert_at(Container& container, ObjType object, int pos)
 }
 
 template <typename Container>
-void remove(Container& container, size_t pos)
-{
+void remove(Container& container, size_t pos){
        size_t size = container.size();
        for(auto i = pos+1 ; i < size ; i++)
            container[i-1] = container[i];
@@ -198,16 +194,14 @@ bt_ErrorCode CBTreePage<Trait>::Insert(const keyType& key, const ObjIDType ObjID
        if( pos < m_KeyCount && (keyType)m_Keys[pos] == key && m_Unique)
                return bt_duplicate; // this key is duplicate
 
-       if( !m_SubPages[pos] ) // this is a leave
-       {
-               ::insert_at(m_Keys, ObjectInfo(key, ObjID), pos);
-               m_KeyCount++;
-               if( Overflow() )
-                       return bt_overflow;
-               return bt_ok;
+       if( !m_SubPages[pos] ){ // this is a leave
+                ::insert_at(m_Keys, ObjectInfo(key, ObjID), pos);
+                m_KeyCount++;
+                if( Overflow() )
+                        return bt_overflow;
+                return bt_ok;
        }
-       else
-       {
+       else{
                // recursive insertion
                error = m_SubPages[pos]->Insert(key, ObjID);
                if( error == bt_overflow )
@@ -296,8 +290,7 @@ bool CBTreePage<Trait>::Redistribute2(size_t pos)
                if( m_SubPages[pos+1]->Underflow() )
                        return false;
        }
-       else // The problem is exactly at pos !
-       {
+       else{ // The problem is exactly at pos !
                // Rotate L2R
                RedistributeL2R(pos-1);
                RedistributeR2L(pos+1);
@@ -314,7 +307,7 @@ void CBTreePage<Trait>::RedistributeR2L(size_t pos)
                *pTarget = m_SubPages[pos-1];
 
        while(pSource->GetNumberOfKeys() > pSource->MinNumberOfKeys() &&
-                 pTarget->GetNumberOfKeys() < pSource->GetNumberOfKeys() )
+             pTarget->GetNumberOfKeys() < pSource->GetNumberOfKeys() )
        {
                // Move from this page to the down-left page \/
                ::insert_at(pTarget->m_Keys, m_Keys[pos-1], pTarget->NumberOfKeys()++);
