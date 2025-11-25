@@ -29,7 +29,7 @@ void foreach (Iterator begin, Iterator end,
               Function op, Args const&... args)
 {
     while (begin != end){
-        std::invoke(op, args..., *begin);
+        std::invoke(op, forward<Args>(args)..., *begin);
         ++begin;
     }
 }

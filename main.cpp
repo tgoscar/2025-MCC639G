@@ -2,10 +2,11 @@
 #include "test.h"
 #include "util.h"
 #include "clasestemplate.h"
-#include "linkedlist.h"
-#include "doublelinkedlist.h"
-#include "binarytree.h"
+// #include "linkedlist.h"
+// #include "doublelinkedlist.h"
+// #include "binarytree.h"
 #include "pointers.h"
+#include "variadic.h"
 // #include "vector.h"
 
 using namespace std;
@@ -34,8 +35,9 @@ int main(){
 
     // DemoVector();
     
-    DemoLinkedList();
-    DemoDoubleLinkedList();
-    DemoBinaryTree();
+    // DemoLinkedList();
+    // DemoDoubleLinkedList();
+    // DemoBinaryTree();
+    VariadicDemo();
     return 0;
 }
