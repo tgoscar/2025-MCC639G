@@ -1,226 +1,235 @@
-#ifndef __BINARY_TREE_H__  
+﻿#ifndef __BINARY_TREE_H__  
 #define __BINARY_TREE_H__ 
-//#include <utility>
-//#include <algorithm>
+
 #include <cassert>
+#include <vector>
+#include <functional>
+#include <string>
 #include "types.h"
-//#include "util.h"
+
 using namespace std;
 
+// Forward declarations
+template <typename Traits> class CBinaryTree;
+template <typename Container> class binary_tree_iterator;
 
+// Nodo del árbol binario
 template <typename Traits>
-class CBinaryTreeNode{
+class CBinaryTreeNode {
 public:
-  // TODO: Change T by KeyNode
-  using value_type = typename Traits::T;
-  using Node = CBinaryTreeNode<T>;
+    using T = typename Traits::T;
+    using Node = CBinaryTreeNode<Traits>;
 
-private:
-    T       m_data;
-    Node *  m_pParent = nullptr;
-    Ref     m_ref;
-    vector<Node *> m_pChild = {nullptr, nullptr}; // 2 hijos inicializados en nullptr
+protected:
+    T m_data;
+    Node* m_pParent = nullptr;
+    Ref m_ref;
+    vector<Node*> m_pChild = {nullptr, nullptr}; // 2 hijos
+
 public:
-    CBinaryTreeNode(Node* pParent, KeyNode data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
-        : m_pParent(pParent), m_data(data), m_ref(ref)
-    {
+    CBinaryTreeNode(Node* pParent, T data, Ref ref, Node* p0 = nullptr, Node* p1 = nullptr)
+        : m_data(data), m_pParent(pParent), m_ref(ref) {
         m_pChild[0] = p0;
         m_pChild[1] = p1;
     }
 
-    // TODO: Keynode 
-    T         getData()                {   return m_data;    }
-    T        &getDataRef()             {   return m_data;    }
- 
- // TODO: review if these functions must remain public/private
-    void      setpChild(const Node *pChild, size_t pos)  {   m_pChild[pos] = pChild;  }
-    Node    * getChild(size_t branch){ return m_pChild[branch];  }
-    Node    *&getChildRef(size_t branch){ return m_pChild[branch];  }
-    Node    * getParent() { return m_pParent;   }
-};
-
-template <typename Container>
-class binary_tree_iterator : public general_iterator<Container,  class binary_tree_iterator<Container> > // 
-{  
-public:
-    using Parent = class general_iterator<Container, binary_tree_iterator<Container> >;     \
-    using Node   = typename Container::Node;
-    using Container = binary_tree_iterator<Container>;
-
-  public:
-    binary_tree_iterator(Container *pContainer, Node *pNode) : Parent (pContainer,pNode) {}
-    binary_tree_iterator(Container &other)  : Parent (other) {}
-    binary_tree_iterator(Container &&other) : Parent(other) {} // Move constructor C++11 en adelante
-
-public:
-    // TODO: Fuentes Patrick
-    binary_tree_iterator operator++() {
-        Parent::m_pNode = Parent::m_pNode ? (Node*)Parent::m_pNode->getpNext() : nullptr;
-        return *this;
-    }
-};
-
-template <typename _T>
-struct BinaryTreeAscTraits{
-    using  T         = _T;
-    using  Node      = CBinaryTreeNode<T>;
-    using  CompareFn = less<T>;
-};
-
-template <typename _T>
-struct BinaryTreeDescTraits
-{
-    using  T         = _T;
-    using  Node      = CBinaryTreeNode<T>;
-    using  CompareFn = greater<T>;
-};
-
-template <typename Traits>
-class CBinaryTree{
-  public:
-    using value_type    = typename Traits::T;
-    using Node          = typename Traits::Node;
+    T getData() { return m_data; }
+    T& getDataRef() { return m_data; }
     
-    using CompareFn     = typename Traits::CompareFn;
-    using Container     = CBinaryTree<Traits>;
-    using iterator      = binary_tree_iterator<Container>;
+    void setpChild(Node* pChild, size_t pos) { m_pChild[pos] = pChild; }
+    Node* getChild(size_t branch) { return m_pChild[branch]; }
+    Node*& getChildRef(size_t branch) { return m_pChild[branch]; }
+    Node* getParent() { return m_pParent; }
+    
+    // NUEVO: Método para actualizar el padre
+    void setParent(Node* pParent) { m_pParent = pParent; }
+    
+    // Para el iterador (placeholder)
+    Node* getpNext() { return nullptr; } // TODO: implementar recorrido
+};
+
+// Iterador del árbol binario
+template <typename Container>
+class binary_tree_iterator {
+public:
+    using Node = typename Container::Node;
+    using value_type = typename Container::value_type;
 
 protected:
-    Node    *m_pRoot = nullptr;
-    size_t   m_size  = 0;
+    Container* m_pContainer = nullptr;
+    Node* m_pNode = nullptr;
+
+public:
+    binary_tree_iterator(Container* pContainer, Node* pNode)
+        : m_pContainer(pContainer), m_pNode(pNode) {}
+    
+    binary_tree_iterator(const binary_tree_iterator& other)
+        : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode) {}
+    
+    binary_tree_iterator operator++() {
+        m_pNode = m_pNode ? m_pNode->getpNext() : nullptr;
+        return *this;
+    }
+    
+    bool operator==(const binary_tree_iterator& other) const {
+        return m_pContainer == other.m_pContainer && m_pNode == other.m_pNode;
+    }
+    
+    bool operator!=(const binary_tree_iterator& other) const {
+        return !(*this == other);
+    }
+    
+    value_type& operator*() { return m_pNode->getDataRef(); }
+};
+
+// Traits para árbol binario ascendente
+template <typename _T>
+struct BinaryTreeAscTraits {
+    using T = _T;
+    using Node = CBinaryTreeNode<BinaryTreeAscTraits<_T>>;
+    using CompareFn = std::less<_T>;
+};
+
+// Traits para árbol binario descendente
+template <typename _T>
+struct BinaryTreeDescTraits {
+    using T = _T;
+    using Node = CBinaryTreeNode<BinaryTreeDescTraits<_T>>;
+    using CompareFn = std::greater<_T>;
+};
+
+// Árbol binario de búsqueda
+template <typename Traits>
+class CBinaryTree {
+public:
+    using value_type = typename Traits::T;
+    using Node = typename Traits::Node;
+    using CompareFn = typename Traits::CompareFn;
+    using Container = CBinaryTree<Traits>;
+    using iterator = binary_tree_iterator<Container>;
+
+protected:
+    Node* m_pRoot = nullptr;
+    size_t m_size = 0;
     CompareFn Compfn;
-public: 
-    size_t  size()  const       { return m_size;       }
-    bool    empty() const       { return size() == 0;  }
-    // TODO: insert must receive two paramaters: elem and LinkedValueType value
-    virtual void insert(value_type elem, Ref ref) {
-        m_pRoot = internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
+
+public:
+    size_t size() const { return m_size; }
+    bool empty() const { return size() == 0; }
+    
+    void insert(value_type elem, Ref ref) {
+        m_pRoot = internal_insert(elem, ref, nullptr, m_pRoot);
     }
 
 protected:
     Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
         return new Node(pParent, elem, ref);
     }
-    Node* internal_insert(value_type elem, Ref ref, LinkedValueType value,
-                          Node* pParent, Node*& rpOrigin)
-    {
+    
+    // IMPORTANTE: virtual para que AVL pueda hacer override
+    virtual Node* internal_insert(value_type elem, Ref ref,
+                                   Node* pParent, Node*& rpOrigin) {
         if (!rpOrigin) {
             ++m_size;
             return (rpOrigin = CreateNode(pParent, elem, ref));
         }
 
         size_t branch = Compfn(elem, rpOrigin->getDataRef()) ? 0 : 1;
-        return internal_insert(elem, ref, nullptr, rpOrigin, rpOrigin->getChildRef(branch));
+        
+        // Crear una referencia temporal al hijo para que los cambios se propaguen
+        auto& childRef = rpOrigin->getChildRef(branch);
+        Node* child = static_cast<Node*>(childRef);
+        
+        // Insertar recursivamente (child se modifica por referencia)
+        Node* inserted = internal_insert(elem, ref, rpOrigin, child);
+        
+        // Actualizar el puntero del hijo
+        childRef = child;
+        
+        return inserted;
     }
+
 public:
-    // TODO: Selis Luis (Copy Constructor)
-    CBinaryTree(Binary &other);
+    CBinaryTree() {}
     
-    CBinaryTree(Binary &&other)
-        : m_pRoot(std::move(other.m_pRoot)), 
-          m_size (std::move(other.m_size)), 
-          Compfn (std::move(other.Compfn))
-    { }
-
-    // TODO: Selis Luis (Destructor)
-    virtual ~CBinaryTree(){  } 
+    // Move constructor
+    CBinaryTree(CBinaryTree&& other) noexcept
+        : m_pRoot(other.m_pRoot), m_size(other.m_size) {
+        other.m_pRoot = nullptr;
+        other.m_size = 0;
+    }
     
-    // TODO: Quispe David
-        void inorder  (ostream &os)    {   inorder  (m_pRoot, os, 0);  }
-    // TODO: Quispe David
-    void inorder(Node  *pNode, ostream &os, size_t level){
-        if( pNode ){
-            //Node *pParent = pNode->getParent();
-            inorder(pNode->getChild(0), os, level+1);
-            os << " --> " << pNode->getDataRef();
-            inorder(pNode->getChild(1), os, level+1);
+    // Move assignment
+    CBinaryTree& operator=(CBinaryTree&& other) noexcept {
+        if (this != &other) {
+            // TODO: liberar memoria actual
+            m_pRoot = other.m_pRoot;
+            m_size = other.m_size;
+            other.m_pRoot = nullptr;
+            other.m_size = 0;
         }
+        return *this;
     }
-
-    // TODO: generalize this function by using iterators and apply any function
-    // TODO: Quispe David
-    void inorder(Node  *pNode, void (*visit) (value_type& item)){
-        if( pNode ){   
-            inorder(pNode->getChild(0), *visit);
-            (*visit)(pNode->getDataRef());
-            inorder(pNode->getChild(1), *visit);
-        }
+    
+    virtual ~CBinaryTree() {
+        // TODO: liberar memoria
     }
-
-    // Variadic templates (See foreach.h)
-    template <typename Function, typename... Args>
-    void postorder(Function func, Args const&... args)
-    {    postorder(m_pRoot, 0, func, args...);}
-
-    template <typename Function,typename... Args>
-    void postorder(Node* pNode, size_t level, Function func, Args const&... args) {
+    
+    // Recorridos
+    void inorder(ostream& os) { inorder(m_pRoot, os, 0); }
+    
+    void inorder(Node* pNode, ostream& os, size_t level) {
         if (pNode) {
-            postorder(pNode->getChild(0), level + 1, func, args...);
-            postorder(pNode->getChild(1), level + 1, func, args...);
-            func(pNode, level); 
-        }
-    }
-    // TODO: Villanueva Richard
-    void preorder (ostream &os)    {   preorder (m_pRoot, os, 0);  }
-    // TODO: Generalize this function by using iterators and apply any function
-    // Create a new iterator to walk in postorder
-    // TODO: Villanueva Richard
-    void preorder(Node  *pNode, size_t level, ostream &os){
-        //foreach(preorderbegin(), preorderend(), fn)
-        if( pNode ){   
+            inorder(static_cast<Node*>(pNode->getChild(0)), os, level + 1);
             os << " --> " << pNode->getDataRef();
-            preorder(pNode->getChild(0), level+1, os);
-            preorder(pNode->getChild(1), level+1, os);            
+            inorder(static_cast<Node*>(pNode->getChild(1)), os, level + 1);
         }
     }
-
-    void print    (ostream &os)    {   print    (m_pRoot, 0, os);  }
-    // TODO: generalize this function by using iterators and apply any function
-    void print(Node  *pNode, size_t level, ostream &os){
-        if( pNode ){
-            Node *pParent = pNode->getParent();
-            print(pNode->getChild(1), level+1, os);
-            os << string(" | ") * level << pNode->getDataRef() << "(" << (pParent?to_string(pParent->getData()):"Root") << ")" <<endl;
-            print(pNode->getChild(0), level+1, os);
-        }
-    }
-
-    // TODO: Open question for everyone
-    // Generalizar el recorrido para recibir cualquier funcion
-    // con una cantidad flexible de parametros conm variadic templates
-    // https://en.cppreference.com/w/cpp/language/parameter_packs
     
-    // TODO: Alcazar Joseph
-    void postorder(Node  *pNode, size_t level, ostream &os){
-        //foreach(postorderbegin(), postorderend(), fn)
-        if( pNode ){   
-            postorder(pNode->getChild(0), level+1, os);
-            postorder(pNode->getChild(1), level+1, os);
+    void preorder(ostream& os) { preorder(m_pRoot, 0, os); }
+    
+    void preorder(Node* pNode, size_t level, ostream& os) {
+        if (pNode) {
+            os << " --> " << pNode->getDataRef();
+            preorder(static_cast<Node*>(pNode->getChild(0)), level + 1, os);
+            preorder(static_cast<Node*>(pNode->getChild(1)), level + 1, os);
+        }
+    }
+    
+    void postorder(ostream& os) { postorder(m_pRoot, 0, os); }
+    
+    void postorder(Node* pNode, size_t level, ostream& os) {
+        if (pNode) {
+            postorder(static_cast<Node*>(pNode->getChild(0)), level + 1, os);
+            postorder(static_cast<Node*>(pNode->getChild(1)), level + 1, os);
             os << " --> " << pNode->getDataRef();
         }
     }
-
-    // TODO: Arriola Aldo
-    void Write(ostream &os) { os << *this;  }
-
-    // TODO: Toledo Oscar
-    void Read(istream &is)  { /* TODO */  }
+    
+    void print(ostream& os) { print(m_pRoot, 0, os); }
+    
+    void print(Node* pNode, size_t level, ostream& os) {
+        if (pNode) {
+            Node* pParent = static_cast<Node*>(pNode->getParent());
+            print(static_cast<Node*>(pNode->getChild(1)), level + 1, os);
+            for (size_t i = 0; i < level; ++i) os << " | ";
+            os << pNode->getDataRef() << "(";
+            if (pParent) os << pParent->getData();
+            else os << "Root";
+            os << ")" << endl;
+            print(static_cast<Node*>(pNode->getChild(0)), level + 1, os);
+        }
+    }
+    
+    void Write(ostream& os) { os << *this; }
 };
 
-// TODO: Arriola Aldo
-// operator <<
+// Operador 
 template <typename Traits>
-ostream & operator<<(ostream &os, CBinaryTree<Traits> &obj){
+ostream& operator<<(ostream& os, CBinaryTree<Traits>& obj) {
     os << "CBinaryTree with " << obj.size() << " elements.";
     obj.inorder(os);
     return os;
-}
-
-// TODO: Toledo Oscar
-template <typename Traits>
-istream & operator>>(istream &is, CBinaryTree<Traits> &obj){
-    // Leer el arbol
-    return is;
 }
 
 void DemoBinaryTree();
