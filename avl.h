@@ -20,8 +20,8 @@ public:
 template <typename _T>
 struct AVLAscTraits{
     using  value_type = _T;
-    using  Node       = CAVLNode<T>;
-    using  CompareFn  = less<T>;
+    using  Node       = CAVLNode<_T>;
+    using  CompareFn  = less<_T>;
 };
 
 template <typename _T>
