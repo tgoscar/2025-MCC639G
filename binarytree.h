@@ -68,7 +68,8 @@ struct BinaryTreeAscTraits{
 };
 
 template <typename _T>
-struct BinaryTreeDescTraits{
+struct BinaryTreeDescTraits
+{
     using  T         = _T;
     using  Node      = CBinaryTreeNode<T>;
     using  CompareFn = greater<T>;
@@ -92,7 +93,7 @@ public:
     size_t  size()  const       { return m_size;       }
     bool    empty() const       { return size() == 0;  }
     // TODO: insert must receive two paramaters: elem and LinkedValueType value
-    void insert(value_type elem, Ref ref) {
+    virtual void insert(value_type elem, Ref ref) {
         m_pRoot = internal_insert(elem, ref, nullptr, nullptr, m_pRoot);
     }
 
@@ -100,7 +101,7 @@ protected:
     Node* CreateNode(Node* pParent, value_type elem, Ref ref) {
         return new Node(pParent, elem, ref);
     }
-    virtual Node* internal_insert(value_type elem, Ref ref, LinkedValueType value,
+    Node* internal_insert(value_type elem, Ref ref, LinkedValueType value,
                           Node* pParent, Node*& rpOrigin)
     {
         if (!rpOrigin) {
@@ -140,24 +141,23 @@ public:
     // TODO: Quispe David
     void inorder(Node  *pNode, void (*visit) (value_type& item)){
         if( pNode ){   
-            inorder(pNode->getChild(0), visit);
+            inorder(pNode->getChild(0), *visit);
             (*visit)(pNode->getDataRef());
-            inorder(pNode->getChild(1), visit);
+            inorder(pNode->getChild(1), *visit);
         }
     }
 
     // Variadic templates (See foreach.h)
-    // Este esta funcionando bien
     template <typename Function, typename... Args>
     void postorder(Function func, Args const&... args)
-    {    postorder(m_pRoot, 0, func, args...);  }
+    {    postorder(m_pRoot, 0, func, args...);}
 
     template <typename Function,typename... Args>
     void postorder(Node* pNode, size_t level, Function func, Args const&... args) {
         if (pNode) {
             postorder(pNode->getChild(0), level + 1, func, args...);
             postorder(pNode->getChild(1), level + 1, func, args...);
-            func(pNode->GetDataRef(), level, args...); 
+            func(pNode, level); 
         }
     }
     // TODO: Villanueva Richard
