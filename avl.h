@@ -1,262 +1,231 @@
-﻿#ifndef __AVL_H__
+#ifndef __AVL_H__
 #define __AVL_H__
 
 #include "binarytree.h"
+#include <algorithm>
+#include <iostream>
+#include <queue>
+#include <string>
 
-// Nodo AVL hereda de CBinaryTreeNode
+using namespace std;
+
+// ===========================================================================
+// CAVLNode: Nodo especializado para árboles AVL
+// ===========================================================================
 template <typename Traits>
 class CAVLNode : public CBinaryTreeNode<Traits> {
 public:
-    using value_type = typename Traits::T;
     using Base = CBinaryTreeNode<Traits>;
     
 protected:
     int m_balanceFactor = 0;
     
 public:
-    CAVLNode(typename Base::Node* pParent, value_type data, Ref ref)
-        : Base(pParent, data, ref), m_balanceFactor(0) {}
+    template<typename... Args>
+    CAVLNode(Args&&... args)
+        : Base(std::forward<Args>(args)...) {}
     
-    int getBalanceFactor() const { return m_balanceFactor; }
-    void setBalanceFactor(int bf) { m_balanceFactor = bf; }
+    int getBalance() const { return m_balanceFactor; }
+    void setBalance(int bf) { m_balanceFactor = bf; }
+    
+    // Quité const para que compile
+    CAVLNode* getLeft() { 
+        return static_cast<CAVLNode*>(this->getChild(0)); 
+    }
+    
+    CAVLNode* getRight() { 
+        return static_cast<CAVLNode*>(this->getChild(1)); 
+    }
+    
+    void setLeft(CAVLNode* n)  { this->setpChild(n, 0); }
+    void setRight(CAVLNode* n) { this->setpChild(n, 1); }
 };
 
-template <typename _T>
+// ===========================================================================
+// Traits para AVL Ascendente
+// ===========================================================================
+template <typename ValueType>
 struct AVLAscTraits {
-    using T = _T;
-    using Node = CAVLNode<AVLAscTraits<_T>>;
-    using CompareFn = std::less<_T>;
+    using T = ValueType;
+    using Node = CAVLNode<AVLAscTraits<ValueType>>;
+    using CompareFn = less<ValueType>;
 };
 
-template <typename _T>
+// ===========================================================================
+// Traits para AVL Descendente
+// ===========================================================================
+template <typename ValueType>
 struct AVLDescTraits {
-    using T = _T;
-    using Node = CAVLNode<AVLDescTraits<_T>>;
-    using CompareFn = std::greater<_T>;
+    using T = ValueType;
+    using Node = CAVLNode<AVLDescTraits<ValueType>>;
+    using CompareFn = greater<ValueType>;
 };
 
+// ===========================================================================
+// CAVLTree: Árbol AVL con auto-balanceo
+// ===========================================================================
 template <typename Traits>
 class CAVLTree : public CBinaryTree<Traits> {
 public:
     using Base = CBinaryTree<Traits>;
-    using Node = typename Traits::Node;
     using value_type = typename Traits::T;
+    using Node = typename Traits::Node;
     using CompareFn = typename Traits::CompareFn;
     using Container = CAVLTree<Traits>;
-    using iterator = binary_tree_iterator<Container>;
-    using AVLNode = CAVLNode<Traits>;
     
 protected:
-    int getHeight(Node* node) {
-        if (!node) return 0;
-        return 1 + std::max(
-            getHeight(static_cast<Node*>(node->getChild(0))), 
-            getHeight(static_cast<Node*>(node->getChild(1)))
-        );
-    }
-    
-    int calculateBalance(Node* node) {
-        if (!node) return 0;
-        return getHeight(static_cast<Node*>(node->getChild(0))) - 
-               getHeight(static_cast<Node*>(node->getChild(1)));
-    }
-    
-    void updateBalanceFactor(Node* node) {
-        if (node) {
-            int bf = calculateBalance(node);
-            static_cast<AVLNode*>(node)->setBalanceFactor(bf);
-        }
-    }
-    
-    Node* rotateRight(Node* nodeDesbalanceado) {
-        Node* nuevoRoot = static_cast<Node*>(nodeDesbalanceado->getChild(0));
+    // Rotación izquierda
+    Node* rotateLeft(Node* pivotNode) {
+        Node* newRoot = pivotNode->getRight();
+        if (!newRoot) return pivotNode;
         
-        if (!nuevoRoot) {
-            return nodeDesbalanceado;
+        Node* orphanSubtree = newRoot->getLeft();
+        
+        newRoot->setLeft(pivotNode);
+        pivotNode->setRight(orphanSubtree);
+        
+        newRoot->setParent(pivotNode->getParent());
+        pivotNode->setParent(newRoot);
+        if (orphanSubtree) {
+            orphanSubtree->setParent(pivotNode);
         }
         
-        Node* subArbolTemp = static_cast<Node*>(nuevoRoot->getChild(1));
-        Node* padre = static_cast<Node*>(nodeDesbalanceado->getParent());
+        updateBalance(pivotNode);
+        updateBalance(newRoot);
         
-        // Realizar la rotación - actualizar hijos
-        nuevoRoot->setpChild(nodeDesbalanceado, 1);
-        nodeDesbalanceado->setpChild(subArbolTemp, 0);
+        return newRoot;
+    }
+
+    // Rotación derecha
+    Node* rotateRight(Node* pivotNode) {
+        Node* newRoot = pivotNode->getLeft();
+        if (!newRoot) return pivotNode;
         
-        // Actualizar los punteros padre
-        nuevoRoot->setParent(padre);
-        nodeDesbalanceado->setParent(nuevoRoot);
-        if (subArbolTemp) {
-            subArbolTemp->setParent(nodeDesbalanceado);
+        Node* orphanSubtree = newRoot->getRight();
+        
+        newRoot->setRight(pivotNode);
+        pivotNode->setLeft(orphanSubtree);
+        
+        newRoot->setParent(pivotNode->getParent());
+        pivotNode->setParent(newRoot);
+        if (orphanSubtree) {
+            orphanSubtree->setParent(pivotNode);
         }
         
-        // Actualizar hijo del padre
-        if (padre) {
-            if (padre->getChild(0) == nodeDesbalanceado) {
-                padre->setpChild(nuevoRoot, 0);
-            } else {
-                padre->setpChild(nuevoRoot, 1);
+        updateBalance(pivotNode);
+        updateBalance(newRoot);
+        
+        return newRoot;
+    }
+
+    // Calcular altura
+    int getHeight(Node* n) const {
+        if (!n) return 0;
+        int lh = getHeight(n->getLeft());
+        int rh = getHeight(n->getRight());
+        return 1 + std::max(lh, rh);
+    }
+
+    // Calcular balance
+    int getBalance(Node* n) const {
+        if (!n) return 0;
+        return getHeight(n->getRight()) - getHeight(n->getLeft());
+    }
+    
+    // Actualizar balance
+    void updateBalance(Node* n) {
+        if (n) {
+            n->setBalance(getBalance(n));
+        }
+    }
+
+    // Balancear nodo
+    Node* balanceNode(Node* node, const value_type& elem) {
+        int bf = node->getBalance();
+        CompareFn cmp;
+        
+        if (bf > 1) {
+            if (cmp(elem, node->getRight()->getData())) {
+                node->setRight(rotateRight(node->getRight()));
             }
-        }
-        
-        updateBalanceFactor(nodeDesbalanceado);
-        updateBalanceFactor(nuevoRoot);
-        
-        return nuevoRoot;
-    }
-    
-    Node* rotateLeft(Node* nodeDesbalanceado) {
-        Node* nuevoRoot = static_cast<Node*>(nodeDesbalanceado->getChild(1));
-        Node* subArbolTemp = static_cast<Node*>(nuevoRoot->getChild(0));
-        Node* padre = static_cast<Node*>(nodeDesbalanceado->getParent());
-        
-        // Realizar la rotación - actualizar hijos
-        nuevoRoot->setpChild(nodeDesbalanceado, 0);
-        nodeDesbalanceado->setpChild(subArbolTemp, 1);
-        
-        // Actualizar los punteros padre
-        nuevoRoot->setParent(padre);
-        nodeDesbalanceado->setParent(nuevoRoot);
-        if (subArbolTemp) {
-            subArbolTemp->setParent(nodeDesbalanceado);
-        }
-        
-        // Actualizar hijo del padre
-        if (padre) {
-            if (padre->getChild(0) == nodeDesbalanceado) {
-                padre->setpChild(nuevoRoot, 0);
-            } else {
-                padre->setpChild(nuevoRoot, 1);
-            }
-        }
-        
-        updateBalanceFactor(nodeDesbalanceado);
-        updateBalanceFactor(nuevoRoot);
-        
-        return nuevoRoot;
-    }
-    
-    Node* balance(Node* node) {
-        if (!node) return node;
-        
-        updateBalanceFactor(node);
-        int bf = static_cast<AVLNode*>(node)->getBalanceFactor();
-        
-        // Izquierda-Izquierda
-        if (bf > 1 && calculateBalance(static_cast<Node*>(node->getChild(0))) >= 0) {
-            return rotateRight(node);
-        }
-        
-        // Derecha-Derecha
-        if (bf < -1 && calculateBalance(static_cast<Node*>(node->getChild(1))) <= 0) {
             return rotateLeft(node);
         }
         
-        // Izquierda-Derecha
-        if (bf > 1 && calculateBalance(static_cast<Node*>(node->getChild(0))) < 0) {
-            node->setpChild(rotateLeft(static_cast<Node*>(node->getChild(0))), 0);
+        if (bf < -1) {
+            if (!cmp(elem, node->getLeft()->getData())) {
+                node->setLeft(rotateLeft(node->getLeft()));
+            }
             return rotateRight(node);
-        }
-        
-        // Derecha-Izquierda
-        if (bf < -1 && calculateBalance(static_cast<Node*>(node->getChild(1))) > 0) {
-            node->setpChild(rotateRight(static_cast<Node*>(node->getChild(1))), 1);
-            return rotateLeft(node);
         }
         
         return node;
     }
-    
-    Node* internal_insert(value_type elem, Ref ref,
+
+    // Inserción con balanceo
+    virtual Node* internal_insert(value_type elem, Ref ref,
                           Node* pParent, Node*& rpOrigin) override {
+        CompareFn cmp;
         
-        // TODO 1. insertar - Implementación BST completa
         if (!rpOrigin) {
+            Node* newNode = new Node(pParent, elem, ref);
             this->m_size++;
-            rpOrigin = static_cast<Node*>(this->CreateNode(pParent, elem, ref));
-            return rpOrigin;
+            rpOrigin = newNode;
+            return newNode;
         }
         
-        // Determinar la rama (izquierda=0 o derecha=1)
-        CompareFn compare;
-        size_t branch = compare(elem, rpOrigin->getDataRef()) ? 0 : 1;
-        
-        // Obtener referencia al hijo
+        size_t branch = cmp(elem, rpOrigin->getDataRef()) ? 0 : 1;
         auto& childRef = rpOrigin->getChildRef(branch);
         Node* child = static_cast<Node*>(childRef);
+        childRef = internal_insert(elem, ref, rpOrigin, child);
         
-        // Insertar recursivamente
-        Node* inserted = internal_insert(elem, ref, rpOrigin, child);
+        updateBalance(rpOrigin);
         
-        // Actualizar el puntero del hijo
-        childRef = child;
-        
-        // TODO 2 y 3. verificar balance y realizar rotaciones si es necesario
-        if (inserted) {
-            updateBalanceFactor(rpOrigin);
-            int bf = static_cast<AVLNode*>(rpOrigin)->getBalanceFactor();
-            
-            // Solo hacer rotación si hay desbalance (bf < -1 o bf > 1)
-            if (bf > 1 || bf < -1) {
-                rpOrigin = balance(rpOrigin);
-            }
+        Node* balanced = balanceNode(rpOrigin, elem);
+        if (balanced != rpOrigin) {
+            rpOrigin = balanced;
         }
         
-        return inserted;
+        return rpOrigin;
     }
-    
+
 public:
     CAVLTree() : Base() {}
     
-    // Override del insert público
-    void insert(value_type elem, Ref ref) {
-        internal_insert(elem, ref, nullptr, this->m_pRoot);
+    void insert(value_type elem, Ref ref = 0) {
+        Node* root = static_cast<Node*>(this->m_pRoot);
+        this->m_pRoot = internal_insert(elem, ref, nullptr, root);
     }
     
-    // Métodos adicionales para diagnóstico
-    void printBalance(std::ostream& os) {
-        printBalance(this->m_pRoot, os);
-        os << std::endl;
+    // =======================================================================
+    // write: Serializa el árbol a un stream de salida
+    // Escribe los elementos en inorder, separados por espacios
+    // Compatible con read() - NO incluye flechas ni formato extra
+    // =======================================================================
+    void write(std::ostream& os) {
+        write_helper(static_cast<Node*>(this->m_pRoot), os);
+        os << "\n";
     }
     
-    void printBalance(Node* node, std::ostream& os) {
+protected:
+    // Helper recursivo para write (inorder sin formato)
+    void write_helper(Node* node, std::ostream& os) {
         if (node) {
-            printBalance(static_cast<Node*>(node->getChild(0)), os);
-            os << node->getDataRef() << "(BF=" 
-               << static_cast<AVLNode*>(node)->getBalanceFactor() << ") ";
-            printBalance(static_cast<Node*>(node->getChild(1)), os);
+            write_helper(node->getLeft(), os);
+            os << node->getData() << " ";
+            write_helper(node->getRight(), os);
         }
     }
     
-    bool isBalanced() {
-        return isBalanced(this->m_pRoot);
-    }
-    
-    bool isBalanced(Node* node) {
-        if (!node) return true;
-        
-        int bf = calculateBalance(node);
-        if (bf < -1 || bf > 1) return false;
-        
-        return isBalanced(static_cast<Node*>(node->getChild(0))) && 
-               isBalanced(static_cast<Node*>(node->getChild(1)));
-    }
-    
-    bool search(value_type elem) {
-        return search(this->m_pRoot, elem) != nullptr;
-    }
-    
-    Node* search(Node* node, value_type elem) {
-        if (!node) return nullptr;
-        
-        if (elem == node->getDataRef()) return node;
-        
-        CompareFn compare;
-        if (compare(elem, node->getDataRef())) {
-            return search(static_cast<Node*>(node->getChild(0)), elem);
-        } else {
-            return search(static_cast<Node*>(node->getChild(1)), elem);
+public:
+    // =======================================================================
+    // read: Deserializa el árbol desde un stream de entrada
+    // Lee elementos separados por espacios y los inserta con balanceo
+    // =======================================================================
+    void read(std::istream& is) {
+        value_type val;
+        while (is >> val) {
+            insert(val, 0);
         }
-    }
-};
+    };
 
 #endif // __AVL_H__
