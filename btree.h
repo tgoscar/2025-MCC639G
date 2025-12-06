@@ -109,5 +109,5 @@ bool BTree<Trait>::Remove (const keyType key, const long ObjID)
 
 // TODO Add operator>>
 
-
 #endif
+
