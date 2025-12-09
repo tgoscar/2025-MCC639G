@@ -106,12 +106,7 @@ protected:
 
     // ===================================================================
     // Rotación izquierda
-    //      parent          child
-    //       / \            / \
-    //      A   child  =>  parent  R
-    //          / \        / \
-    //       orphan R     A  orphan
-    // ===================================================================
+
     Node* rotateLeft(Node* parent) {
         Node* child = parent->getRight();
         if (!child) return parent;
@@ -136,12 +131,7 @@ protected:
 
     // ===================================================================
     // Rotación derecha
-    //        parent        child
-    //         / \          / \
-    //     child  R   =>   L  parent
-    //      / \                / \
-    //     L  orphan      orphan  R
-    // ===================================================================
+ 
     Node* rotateRight(Node* parent) {
         Node* child = parent->getLeft();
         if (!child) return parent;
