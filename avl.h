@@ -7,28 +7,45 @@
 #include <queue>
 #include <string>
 
-using namespace std;
-
 // ===========================================================================
 // CAVLNode: Nodo especializado para árboles AVL
 // ===========================================================================
 template <typename Traits>
 class CAVLNode : public CBinaryTreeNode<Traits> {
+ 
 public:
+
     using Base = CBinaryTreeNode<Traits>;
+    using value_type = typename Traits::T;
+    using Ref = long;  
     
 protected:
-    int m_balanceFactor = 0;
+    int m_height = 1;
     
 public:
-    template<typename... Args>
-    CAVLNode(Args&&... args)
-        : Base(std::forward<Args>(args)...) {}
+    // CONSTRUCTOR SIMPLE Y DIRECTO
+    CAVLNode(typename Base::Node* pParent, const value_type& elem, Ref ref )
+        : Base(pParent, elem, ref), m_height(1) {}
     
-    int getBalance() const { return m_balanceFactor; }
-    void setBalance(int bf) { m_balanceFactor = bf; }
+    int getHeight() const { return m_height; }
+    void setHeight(int h) { m_height = h; }
     
-    // Quité const para que compile
+    int getBalance() const {
+        const CAVLNode* left = getLeft();
+        const CAVLNode* right = getRight();
+        int lh = left ? left->getHeight() : 0;
+        int rh = right ? right->getHeight() : 0;
+        return rh - lh;
+    }
+    
+    const CAVLNode* getLeft() const { 
+        return static_cast<const CAVLNode*>(this->m_pChild[0]); 
+    }
+    
+    const CAVLNode* getRight() const { 
+        return static_cast<const CAVLNode*>(this->m_pChild[1]); 
+    }
+    
     CAVLNode* getLeft() { 
         return static_cast<CAVLNode*>(this->getChild(0)); 
     }
@@ -48,7 +65,7 @@ template <typename ValueType>
 struct AVLAscTraits {
     using T = ValueType;
     using Node = CAVLNode<AVLAscTraits<ValueType>>;
-    using CompareFn = less<ValueType>;
+    using CompareFn = std::less<ValueType>;
 };
 
 // ===========================================================================
@@ -58,7 +75,7 @@ template <typename ValueType>
 struct AVLDescTraits {
     using T = ValueType;
     using Node = CAVLNode<AVLDescTraits<ValueType>>;
-    using CompareFn = greater<ValueType>;
+    using CompareFn = std::greater<ValueType>;
 };
 
 // ===========================================================================
@@ -74,86 +91,103 @@ public:
     using Container = CAVLTree<Traits>;
     
 protected:
-    // Rotación izquierda
-    Node* rotateLeft(Node* pivotNode) {
-        Node* newRoot = pivotNode->getRight();
-        if (!newRoot) return pivotNode;
-        
-        Node* orphanSubtree = newRoot->getLeft();
-        
-        newRoot->setLeft(pivotNode);
-        pivotNode->setRight(orphanSubtree);
-        
-        newRoot->setParent(pivotNode->getParent());
-        pivotNode->setParent(newRoot);
-        if (orphanSubtree) {
-            orphanSubtree->setParent(pivotNode);
-        }
-        
-        updateBalance(pivotNode);
-        updateBalance(newRoot);
-        
-        return newRoot;
-    }
-
-    // Rotación derecha
-    Node* rotateRight(Node* pivotNode) {
-        Node* newRoot = pivotNode->getLeft();
-        if (!newRoot) return pivotNode;
-        
-        Node* orphanSubtree = newRoot->getRight();
-        
-        newRoot->setRight(pivotNode);
-        pivotNode->setLeft(orphanSubtree);
-        
-        newRoot->setParent(pivotNode->getParent());
-        pivotNode->setParent(newRoot);
-        if (orphanSubtree) {
-            orphanSubtree->setParent(pivotNode);
-        }
-        
-        updateBalance(pivotNode);
-        updateBalance(newRoot);
-        
-        return newRoot;
-    }
-
-    // Calcular altura
-    int getHeight(Node* n) const {
-        if (!n) return 0;
-        int lh = getHeight(n->getLeft());
-        int rh = getHeight(n->getRight());
-        return 1 + std::max(lh, rh);
-    }
-
-    // Calcular balance
-    int getBalance(Node* n) const {
-        if (!n) return 0;
-        return getHeight(n->getRight()) - getHeight(n->getLeft());
-    }
+    using Ref = long;
+    static constexpr CompareFn cmp{};
     
-    // Actualizar balance
-    void updateBalance(Node* n) {
-        if (n) {
-            n->setBalance(getBalance(n));
-        }
+    // ===================================================================
+    // Actualizar altura basada en hijos: O(1)
+    // ===================================================================
+    void updateHeight(Node* n) {
+        if (!n) return;
+        int lh = n->getLeft() ? n->getLeft()->getHeight() : 0;
+        int rh = n->getRight() ? n->getRight()->getHeight() : 0;
+        n->setHeight(1 + std::max(lh, rh));
     }
 
-    // Balancear nodo
-    Node* balanceNode(Node* node, const value_type& elem) {
-        int bf = node->getBalance();
-        CompareFn cmp;
+    // ===================================================================
+    // Rotación izquierda
+    //      parent          child
+    //       / \            / \
+    //      A   child  =>  parent  R
+    //          / \        / \
+    //       orphan R     A  orphan
+    // ===================================================================
+    Node* rotateLeft(Node* parent) {
+        Node* child = parent->getRight();
+        if (!child) return parent;
         
+        Node* orphan = child->getLeft();
+        
+        // Realizar rotación: child sube, parent baja
+        child->setLeft(parent);
+        parent->setRight(orphan);
+        
+        // Actualizar parents
+        child->setParent(parent->getParent());
+        parent->setParent(child);
+        if (orphan) orphan->setParent(parent);
+        
+        // Actualizar alturas (primero parent, luego child)
+        updateHeight(parent);
+        updateHeight(child);
+        
+        return child;
+    }
+
+    // ===================================================================
+    // Rotación derecha
+    //        parent        child
+    //         / \          / \
+    //     child  R   =>   L  parent
+    //      / \                / \
+    //     L  orphan      orphan  R
+    // ===================================================================
+    Node* rotateRight(Node* parent) {
+        Node* child = parent->getLeft();
+        if (!child) return parent;
+        
+        Node* orphan = child->getRight();
+        
+        // Realizar rotación: child sube, parent baja
+        child->setRight(parent);
+        parent->setLeft(orphan);
+        
+        // Actualizar parents
+        child->setParent(parent->getParent());
+        parent->setParent(child);
+        if (orphan) orphan->setParent(parent);
+        
+        // Actualizar alturas (primero parent, luego child)
+        updateHeight(parent);
+        updateHeight(child);
+        
+        return child;
+    }
+
+    // ===================================================================
+    // Balancear nodo después de inserción
+    // ===================================================================
+    Node* balance(Node* node) {
+        if (!node) return nullptr;
+        
+        int bf = node->getBalance();
+        
+        // Right-Right o Right-Left
         if (bf > 1) {
-            if (cmp(elem, node->getRight()->getData())) {
-                node->setRight(rotateRight(node->getRight()));
+            Node* rightChild = node->getRight();
+            // Right-Left case: doble rotación
+            if (rightChild && rightChild->getBalance() < 0) {
+                node->setRight(rotateRight(rightChild));
             }
             return rotateLeft(node);
         }
         
+        // Left-Left o Left-Right
         if (bf < -1) {
-            if (!cmp(elem, node->getLeft()->getData())) {
-                node->setLeft(rotateLeft(node->getLeft()));
+            Node* leftChild = node->getLeft();
+            // Left-Right case: doble rotación
+            if (leftChild && leftChild->getBalance() > 0) {
+                node->setLeft(rotateLeft(leftChild));
             }
             return rotateRight(node);
         }
@@ -161,29 +195,37 @@ protected:
         return node;
     }
 
-    // Inserción con balanceo
+    // ===================================================================
+    // internal_insert: Override para agregar balanceo AVL
+    // Esta función es llamada por CBinaryTree::insert()
+    // ===================================================================
     virtual Node* internal_insert(value_type elem, Ref ref,
-                          Node* pParent, Node*& rpOrigin) override {
-        CompareFn cmp;
-        
+                                   Node* pParent, Node*& rpOrigin) override {
+        // Caso base: insertar nuevo nodo
         if (!rpOrigin) {
-            Node* newNode = new Node(pParent, elem, ref);
             this->m_size++;
-            rpOrigin = newNode;
-            return newNode;
+            rpOrigin = new Node(pParent, elem, ref);
+            return rpOrigin;
         }
         
+        // Inserción recursiva
         size_t branch = cmp(elem, rpOrigin->getDataRef()) ? 0 : 1;
         auto& childRef = rpOrigin->getChildRef(branch);
         Node* child = static_cast<Node*>(childRef);
+        
+        // Insertar recursivamente - child será actualizado por referencia
         childRef = internal_insert(elem, ref, rpOrigin, child);
         
-        updateBalance(rpOrigin);
-        
-        Node* balanced = balanceNode(rpOrigin, elem);
-        if (balanced != rpOrigin) {
-            rpOrigin = balanced;
+        // Actualizar parent del hijo (puede haber cambiado por rotación)
+        if (childRef) {
+            childRef->setParent(rpOrigin);
         }
+        
+        // Actualizar altura de este nodo
+        updateHeight(rpOrigin);
+        
+        // Balancear y retornar (puede cambiar rpOrigin)
+        rpOrigin = balance(rpOrigin);
         
         return rpOrigin;
     }
@@ -191,41 +233,84 @@ protected:
 public:
     CAVLTree() : Base() {}
     
-    void insert(value_type elem, Ref ref = 0) {
-        Node* root = static_cast<Node*>(this->m_pRoot);
-        this->m_pRoot = internal_insert(elem, ref, nullptr, root);
-    }
+    // Usar insert() heredado de CBinaryTree
+    // que llama a nuestro internal_insert() sobrescrito
     
-    // =======================================================================
-    // write: Serializa el árbol a un stream de salida
-    // Escribe los elementos en inorder, separados por espacios
-    // Compatible con read() - NO incluye flechas ni formato extra
-    // =======================================================================
-    void write(std::ostream& os) {
-        write_helper(static_cast<Node*>(this->m_pRoot), os);
-        os << "\n";
-    }
-    
-protected:
-    // Helper recursivo para write (inorder sin formato)
-    void write_helper(Node* node, std::ostream& os) {
-        if (node) {
-            write_helper(node->getLeft(), os);
-            os << node->getData() << " ";
-            write_helper(node->getRight(), os);
+    // ===================================================================
+    // printTree: Imprime el árbol de forma visual
+    // indent: espacios por nivel de profundidad (default: 4)
+    // ===================================================================
+    void printTree(int indent = 4, Node* node = nullptr, int depth = 0) const {
+        // Primera llamada: inicializar con raíz
+        if (depth == 0 && node == nullptr) {
+            std::cout << "Arbol AVL (visual):" << std::endl;
+            node = static_cast<Node*>(this->m_pRoot);
         }
+        
+        if (!node) return;
+        
+        printTree(indent, node->getRight(), depth + 1);
+        
+        std::cout << std::string(depth * indent, ' ') 
+                  << node->getData() 
+                  << " (BF:" << node->getBalance() 
+                  << " H:" << node->getHeight() << ")"
+                  << std::endl;
+        
+        printTree(indent, node->getLeft(), depth + 1);
     }
     
-public:
-    // =======================================================================
+    // ===================================================================
+    // write: Serializa el árbol a un stream de salida (inorder)
+    // ===================================================================
+    void write(std::ostream& os = std::cout, Node* node = nullptr, bool first = true) const {
+        // Primera llamada: inicializar con raíz
+        if (first) {
+            node = static_cast<Node*>(this->m_pRoot);
+        }
+        
+        if (node) {
+            write(os, node->getLeft(), false);
+            os << node->getData() << " ";
+            write(os, node->getRight(), false);
+        }
+        
+        // Solo al final de la primera llamada
+        if (first) os << "\n";
+    }
+    
+    // ===================================================================
     // read: Deserializa el árbol desde un stream de entrada
-    // Lee elementos separados por espacios y los inserta con balanceo
-    // =======================================================================
+    // ===================================================================
     void read(std::istream& is) {
         value_type val;
         while (is >> val) {
-            insert(val, 0);
+            this->insert(val, 0);
         }
-    };
+    }
+    
+    // ===================================================================
+    // inorder: Recorrido inorder con mensaje opcional
+    // ===================================================================
+    void inorder(std::ostream& os = std::cout, 
+                 const std::string& prefix = "Recorrido inorder: ",
+                 Node* node = nullptr,
+                 bool first = true) const {
+        // Primera llamada: imprimir prefijo e inicializar
+        if (first) {
+            if (!prefix.empty()) os << prefix;
+            node = static_cast<Node*>(this->m_pRoot);
+        }
+        
+        if (node) {
+            inorder(os, "", node->getLeft(), false);
+            os << node->getData() << " ";
+            inorder(os, "", node->getRight(), false);
+        }
+        
+        // Solo al final de la primera llamada
+        if (first) os << std::endl;
+    }
+};
 
 #endif // __AVL_H__
