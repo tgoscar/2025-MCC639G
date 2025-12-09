@@ -30,7 +30,7 @@ public:
     // ------------------------------------------------------
     //  Forward Iterator
     // ------------------------------------------------------
-    class iterator
+    class forward_iterator
     {
     public:
         using iterator_category = std::forward_iterator_tag;
@@ -39,9 +39,9 @@ public:
         using pointer           = ObjectInfo*;
         using reference         = ObjectInfo&;
 
-        iterator() : m_current(nullptr), m_index(0) {}
+        forward_iterator() : m_current(nullptr), m_index(0) {}
         
-        iterator(const BTree* tree) : m_current(nullptr), m_index(0)
+        forward_iterator(const BTree* tree) : m_current(nullptr), m_index(0)
         {
             if (tree && tree->m_root)
             {
@@ -54,7 +54,7 @@ public:
         reference operator*() const { return *m_current; }
         pointer operator->() const { return m_current; }
 
-        iterator& operator++()
+        forward_iterator& operator++()
         {
             if (m_index + 1 < m_items.size())
             {
@@ -68,19 +68,19 @@ public:
             return *this;
         }
 
-        iterator operator++(int)
+        forward_iterator operator++(int)
         {
-            iterator tmp = *this;
+            forward_iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        bool operator==(const iterator& other) const
+        bool operator==(const forward_iterator& other) const
         {
             return m_current == other.m_current;
         }
 
-        bool operator!=(const iterator& other) const
+        bool operator!=(const forward_iterator& other) const
         {
             return !(*this == other);
         }
@@ -112,9 +112,9 @@ public:
     };
 
     // ------------------------------------------------------
-    //  Reverse Iterator (backward)
+    //  Backward Iterator
     // ------------------------------------------------------
-    class reverse_iterator
+    class backward_iterator
     {
     public:
         using iterator_category = std::forward_iterator_tag;
@@ -123,9 +123,9 @@ public:
         using pointer           = ObjectInfo*;
         using reference         = ObjectInfo&;
 
-        reverse_iterator() : m_current(nullptr), m_index(0) {}
+        backward_iterator() : m_current(nullptr), m_index(0) {}
         
-        reverse_iterator(const BTree* tree) : m_current(nullptr), m_index(0)
+        backward_iterator(const BTree* tree) : m_current(nullptr), m_index(0)
         {
             if (tree && tree->m_root)
             {
@@ -141,7 +141,7 @@ public:
         reference operator*() const { return *m_current; }
         pointer operator->() const { return m_current; }
 
-        reverse_iterator& operator++()
+        backward_iterator& operator++()
         {
             if (m_index > 0)
             {
@@ -155,19 +155,19 @@ public:
             return *this;
         }
 
-        reverse_iterator operator++(int)
+        backward_iterator operator++(int)
         {
-            reverse_iterator tmp = *this;
+            backward_iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        bool operator==(const reverse_iterator& other) const
+        bool operator==(const backward_iterator& other) const
         {
             return m_current == other.m_current;
         }
 
-        bool operator!=(const reverse_iterator& other) const
+        bool operator!=(const backward_iterator& other) const
         {
             return !(*this == other);
         }
@@ -221,26 +221,26 @@ public:
     // ------------------------------------------------------
     //  Iterator methods
     // ------------------------------------------------------
-    iterator begin() const
+    forward_iterator begin() const
     {
         std::shared_lock<std::shared_mutex> lock(m_mutex);
-        return iterator(this);
+        return forward_iterator(this);
     }
 
-    iterator end() const
+    forward_iterator end() const
     {
-        return iterator();
+        return forward_iterator();
     }
 
-    reverse_iterator rbegin() const
+    backward_iterator rbegin() const
     {
         std::shared_lock<std::shared_mutex> lock(m_mutex);
-        return reverse_iterator(this);
+        return backward_iterator(this);
     }
 
-    reverse_iterator rend() const
+    backward_iterator rend() const
     {
-        return reverse_iterator();
+        return backward_iterator();
     }
 
     // ------------------------------------------------------
@@ -445,7 +445,7 @@ private:
     std::size_t m_numKeys;
     mutable std::shared_mutex m_mutex;  // Para concurrencia
 
-    // Métodos internos sin locks (para uso interno cuando ya tenemos el lock)
+    // Metodos internos sin locks (para uso interno cuando ya tenemos el lock)
     bool SearchInternal(const keyType& k, ObjIDType& outVal) const
     {
         if (!m_root) return false;
