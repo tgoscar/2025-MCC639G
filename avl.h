@@ -24,7 +24,7 @@ protected:
     
 public:
     // CONSTRUCTOR SIMPLE Y DIRECTO
-    CAVLNode(typename Base::Node* pParent, const value_type& elem, Ref ref )
+    CAVLNode(typename Traits::Node* pParent, const value_type& elem, Ref ref )
         : Base(pParent, elem, ref), m_height(1) {}
     
     int getHeight() const { return m_height; }
@@ -106,7 +106,7 @@ protected:
 
     // ===================================================================
     // Rotación izquierda
-
+    // ===================================================================
     Node* rotateLeft(Node* parent) {
         Node* child = parent->getRight();
         if (!child) return parent;
@@ -131,7 +131,7 @@ protected:
 
     // ===================================================================
     // Rotación derecha
- 
+    // ===================================================================
     Node* rotateRight(Node* parent) {
         Node* child = parent->getLeft();
         if (!child) return parent;
@@ -227,7 +227,7 @@ public:
     // que llama a nuestro internal_insert() sobrescrito
     
     // ===================================================================
-    // printTree: Imprime el árbol de forma visual
+    // printTree: Imprime el árbol de forma visual con balance y altura
     // indent: espacios por nivel de profundidad (default: 4)
     // ===================================================================
     void printTree(int indent = 4, Node* node = nullptr, int depth = 0) const {
@@ -251,25 +251,6 @@ public:
     }
     
     // ===================================================================
-    // write: Serializa el árbol a un stream de salida (inorder)
-    // ===================================================================
-    void write(std::ostream& os = std::cout, Node* node = nullptr, bool first = true) const {
-        // Primera llamada: inicializar con raíz
-        if (first) {
-            node = static_cast<Node*>(this->m_pRoot);
-        }
-        
-        if (node) {
-            write(os, node->getLeft(), false);
-            os << node->getData() << " ";
-            write(os, node->getRight(), false);
-        }
-        
-        // Solo al final de la primera llamada
-        if (first) os << "\n";
-    }
-    
-    // ===================================================================
     // read: Deserializa el árbol desde un stream de entrada
     // ===================================================================
     void read(std::istream& is) {
@@ -277,29 +258,6 @@ public:
         while (is >> val) {
             this->insert(val, 0);
         }
-    }
-    
-    // ===================================================================
-    // inorder: Recorrido inorder con mensaje opcional
-    // ===================================================================
-    void inorder(std::ostream& os = std::cout, 
-                 const std::string& prefix = "Recorrido inorder: ",
-                 Node* node = nullptr,
-                 bool first = true) const {
-        // Primera llamada: imprimir prefijo e inicializar
-        if (first) {
-            if (!prefix.empty()) os << prefix;
-            node = static_cast<Node*>(this->m_pRoot);
-        }
-        
-        if (node) {
-            inorder(os, "", node->getLeft(), false);
-            os << node->getData() << " ";
-            inorder(os, "", node->getRight(), false);
-        }
-        
-        // Solo al final de la primera llamada
-        if (first) os << std::endl;
     }
 };
 
