@@ -27,6 +27,51 @@ public:
     using Node       = CBTreePage<Trait>;
     using ObjectInfo = typename Node::ObjectInfo;
 
+
+    // ------------------------------------------------------
+    //  ForEach general (thread-safe)
+    // ------------------------------------------------------
+    template<typename Fn>
+    void ForEach(Fn&& fn) const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        if (!m_root) return;
+        m_root->ForEach(0, std::forward<Fn>(fn));
+    }
+
+    // ------------------------------------------------------
+    //  FirstThat general (thread-safe)
+    // ------------------------------------------------------
+    template<typename Pred>
+    ObjectInfo* FirstThat(Pred&& pred)
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        if (!m_root) return nullptr;
+        return m_root->FirstThat(0, std::forward<Pred>(pred));
+    }
+    
+    
+    // ------------------------------------------------------
+    //  Constructores / destructor
+    // ------------------------------------------------------
+    BTree(int order = 3, bool unique = true)
+        : m_t(order)
+        , m_root(new Node(order))
+        , m_unique(unique)
+        , m_numKeys(0)
+    {}
+
+    ~BTree()
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        delete m_root;
+    }
+
+    // No copiamos para simplificar
+    BTree(const BTree&)            = delete;
+    BTree& operator=(const BTree&) = delete;
+
+
     // ------------------------------------------------------
     //  Forward Iterator
     // ------------------------------------------------------
@@ -197,27 +242,7 @@ public:
         std::size_t m_index;
         std::vector<ObjectInfo*> m_items;
     };
-
-    // ------------------------------------------------------
-    //  Constructores / destructor
-    // ------------------------------------------------------
-    BTree(int order = 3, bool unique = true)
-        : m_t(order)
-        , m_root(new Node(order))
-        , m_unique(unique)
-        , m_numKeys(0)
-    {}
-
-    ~BTree()
-    {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-        delete m_root;
-    }
-
-    // No copiamos para simplificar
-    BTree(const BTree&)            = delete;
-    BTree& operator=(const BTree&) = delete;
-
+    
     // ------------------------------------------------------
     //  Iterator methods
     // ------------------------------------------------------
@@ -285,27 +310,7 @@ public:
         return SearchInternal(k, outVal);
     }
 
-    // ------------------------------------------------------
-    //  ForEach general (thread-safe)
-    // ------------------------------------------------------
-    template<typename Fn>
-    void ForEach(Fn&& fn) const
-    {
-        std::shared_lock<std::shared_mutex> lock(m_mutex);
-        if (!m_root) return;
-        m_root->ForEach(0, std::forward<Fn>(fn));
-    }
 
-    // ------------------------------------------------------
-    //  FirstThat general (thread-safe)
-    // ------------------------------------------------------
-    template<typename Pred>
-    ObjectInfo* FirstThat(Pred&& pred)
-    {
-        std::unique_lock<std::shared_mutex> lock(m_mutex);
-        if (!m_root) return nullptr;
-        return m_root->FirstThat(0, std::forward<Pred>(pred));
-    }
 
     // ------------------------------------------------------
     //  Print usando ForEach
@@ -373,26 +378,26 @@ public:
         m_numKeys = 0;
         m_root    = new Node(m_t);
 
-        for (std::size_t i = 0; i < count; ++i)
-        {
-            keyType   k{};
-            ObjIDType v{};
-            ifs.read(reinterpret_cast<char*>(&k), sizeof(k));
-            ifs.read(reinterpret_cast<char*>(&v), sizeof(v));
-            
-            // Llamamos InsertNonFull directamente (ya tenemos el lock)
-            if (!m_root) m_root = new Node(m_t);
-            if (m_root->isFull())
-            {
-                Node* s = new Node(m_t);
-                s->m_leaf = false;
-                s->m_children.push_back(m_root);
-                s->SplitChild(0);
-                m_root = s;
-            }
-            m_root->InsertNonFull(k, v);
-            ++m_numKeys;
-        }
+       for (std::size_t i = 0; i < count; ++i)
+       {
+       keyType   key{};
+       ObjIDType objId{};
+
+       ifs.read(reinterpret_cast<char*>(&key),  sizeof(key));
+       ifs.read(reinterpret_cast<char*>(&objId), sizeof(objId));
+
+       if (m_root->isFull())
+       {
+              Node* s = new Node(m_t);
+              s->m_leaf = false;
+              s->m_children.push_back(m_root);
+              s->SplitChild(0);
+              m_root = s;
+       }
+
+       m_root->InsertNonFull(key, objId);
+       ++m_numKeys;
+       }
 
         return true;
     }
@@ -409,34 +414,35 @@ public:
     // ------------------------------------------------------
     //  operator>> (thread-safe)
     // ------------------------------------------------------
-    friend std::istream& operator>>(std::istream& is, BTree& tree)
-    {
-        std::unique_lock<std::shared_mutex> lock(tree.m_mutex);
-        
-        keyType k;
-        ObjIDType v;
-        
-        while (is >> k >> v)
-        {
-            // Insertamos sin lock (ya lo tenemos)
-            if (!tree.m_root)
-                tree.m_root = new Node(tree.m_t);
+       friend std::istream& operator>>(std::istream& is, BTree& tree)
+       {
+       std::unique_lock<std::shared_mutex> lock(tree.m_mutex);
+       
+       keyType   key;
+       ObjIDType objId;
+       
+       while (is >> key >> objId)
+       {
+              // Insertamos sin lock (ya lo tenemos)
+              if (!tree.m_root)
+              tree.m_root = new Node(tree.m_t);
 
-            if (tree.m_root->isFull())
-            {
-                Node* s = new Node(tree.m_t);
-                s->m_leaf = false;
-                s->m_children.push_back(tree.m_root);
-                s->SplitChild(0);
-                tree.m_root = s;
-            }
+              if (tree.m_root->isFull())
+              {
+              Node* s = new Node(tree.m_t);
+              s->m_leaf = false;
+              s->m_children.push_back(tree.m_root);
+              s->SplitChild(0);
+              tree.m_root = s;
+              }
 
-            tree.m_root->InsertNonFull(k, v);
-            ++tree.m_numKeys;
-        }
-        
-        return is;
-    }
+              tree.m_root->InsertNonFull(key, objId);
+              ++tree.m_numKeys;
+       }
+       
+       return is;
+       }
+
 
 private:
     int         m_t;
@@ -445,11 +451,11 @@ private:
     std::size_t m_numKeys;
     mutable std::shared_mutex m_mutex;  // Para concurrencia
 
-    // Metodos internos sin locks (para uso interno cuando ya tenemos el lock)
-    bool SearchInternal(const keyType& k, ObjIDType& outVal) const
+    // Métodos internos sin locks (para uso interno cuando ya tenemos el lock)
+    bool SearchInternal(const keyType& key, ObjIDType& outObjId) const
     {
         if (!m_root) return false;
-        return m_root->Search(k, outVal);
+        return m_root->Search(key, outObjId);
     }
 
     template<typename Fn>

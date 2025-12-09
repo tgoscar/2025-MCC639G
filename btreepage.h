@@ -161,7 +161,7 @@ private:
     }
 
     // ----------------------------------------------------------
-    //  ForEach moderno: fn(const ObjectInfo&, size_t level)
+    //  ForEach general: fn(const ObjectInfo&, size_t level)
     // ----------------------------------------------------------
 public:
     template<typename Fn>
@@ -184,7 +184,7 @@ public:
     }
 
     // ----------------------------------------------------------
-    //  FirstThat moderno: pred(ObjectInfo&, size_t level) -> bool
+    //  FirstThat general: pred(ObjectInfo&, size_t level) -> bool
     // ----------------------------------------------------------
     template<typename Pred>
     ObjectInfo* FirstThat(std::size_t level, Pred&& pred)
