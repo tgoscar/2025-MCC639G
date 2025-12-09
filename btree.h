@@ -2,463 +2,462 @@
 #define __BTREE_H__
 
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <cstddef>
+#include <mutex>
+#include <shared_mutex>
 #include "btreepage.h"
-#include <mutex>          // Para soporte de concurrencia
-#include <fstream>        // Para operaciones de lectura/escritura
-#include <memory>         // Para punteros inteligentes
-#include <functional>     // Para foreach/firstthat generalizados
-#include <stack>          // Para implementaciones de iteradores
-#define DEFAULT_BTREE_ORDER 3
 
-const size_t MaxHeight = 5; 
-
-template <typename _keyType, typename _ObjIDType>
+// Trait generico
+template<typename _keyType, typename _ObjIDType>
 struct BTreeTrait
 {
-       using keyType = _keyType;
-       using ObjIDType = _ObjIDType;
-       using LinkedValueType = _ObjIDType;
+    using keyType        = _keyType;
+    using ObjIDType      = _ObjIDType;
+    using LinkedValueType= _ObjIDType;
 };
 
-template <typename Trait>
-class BTree;
-
-// Declaración avanzada del iterador
-template <typename Trait>
-class BTreeIterator;
-
-template <typename Trait>
-class BTree // this is the full version of the BTree
+template<typename Trait>
+class BTree
 {
-       typedef typename Trait::keyType    keyType;
-       typedef typename Trait::ObjIDType    ObjIDType;
-       
-       typedef CBTreePage <Trait> BTNode;// useful shorthand
-       // Declaraciones friend para iteradores y serialización
-       friend class BTreeIterator<Trait>;
-       friend std::ostream& operator<< <Trait>(std::ostream& os, const BTree<Trait>& tree);
-       friend std::istream& operator>> <Trait>(std::istream& is, BTree<Trait>& tree);
-
 public:
-       // ====================================================================
-       // TIPOS DE FUNCIONES GENERALIZADAS (Característica solicitada)
-       // ====================================================================
-       typedef typename BTNode::lpfnForEach2    lpfnForEach2;
-       typedef typename BTNode::lpfnForEach3    lpfnForEach3;
-       typedef typename BTNode::lpfnFirstThat2  lpfnFirstThat2;
-       typedef typename BTNode::lpfnFirstThat3  lpfnFirstThat3;
-       
-       // Nuevas funciones generalizadas con std::function
-       using ForEachFunction = std::function<void(const keyType&, const ObjIDType&)>;
-       using ForEachFunctionExt = std::function<void(const keyType&, const ObjIDType&, void*)>;
-       using FirstThatPredicate = std::function<bool(const keyType&, const ObjIDType&)>;
-       using FirstThatPredicateExt = std::function<bool(const keyType&, const ObjIDType&, void*)>;
+    using keyType    = typename Trait::keyType;
+    using ObjIDType  = typename Trait::ObjIDType;
+    using Node       = CBTreePage<Trait>;
+    using ObjectInfo = typename Node::ObjectInfo;
 
-       typedef typename BTNode::ObjectInfo      ObjectInfo;
+    // ------------------------------------------------------
+    //  Forward Iterator
+    // ------------------------------------------------------
+    class iterator
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type        = ObjectInfo;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = ObjectInfo*;
+        using reference         = ObjectInfo&;
 
-       // ====================================================================
-       // TIPOS DE ITERADORES
-       // ====================================================================
-       using iterator = BTreeIterator<Trait>;
-       using const_iterator = BTreeIterator<Trait>;
-       using reverse_iterator = std::reverse_iterator<iterator>;
-       using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+        iterator() : m_current(nullptr), m_index(0) {}
+        
+        iterator(const BTree* tree) : m_current(nullptr), m_index(0)
+        {
+            if (tree && tree->m_root)
+            {
+                collectInOrder(tree->m_root);
+                if (!m_items.empty())
+                    m_current = m_items[0];
+            }
+        }
 
-public:
-       // ====================================================================
-       // CONSTRUCTORES & DESTRUCTORES
-       // ====================================================================
-       // Constructor por defecto
-       BTree(size_t order = DEFAULT_BTREE_ORDER, bool unique = true)
-              : m_Order(order),
-                m_Root(2 * order  + 1, unique),
-                m_Unique(unique),
-                m_NumKeys(0)
-       {
-              m_Root.SetMaxKeysForChilds(order);
-              m_Height = 1;
-       }
+        reference operator*() const { return *m_current; }
+        pointer operator->() const { return m_current; }
 
-       // Constructor de copia
-       BTree(const BTree& other)
-           : m_Order(other.m_Order),
-             m_Root(other.m_Root),
-             m_Unique(other.m_Unique),
-             m_NumKeys(other.m_NumKeys),
-             m_Height(other.m_Height) {}
+        iterator& operator++()
+        {
+            if (m_index + 1 < m_items.size())
+            {
+                ++m_index;
+                m_current = m_items[m_index];
+            }
+            else
+            {
+                m_current = nullptr;
+            }
+            return *this;
+        }
 
-        // ====================================================================
-       // CONSTRUCTOR DE MOVIMIENTO (Característica solicitada)
-       // ====================================================================
-       BTree(BTree&& other) noexcept
-           : m_Order(std::move(other.m_Order)),
-             m_Root(std::move(other.m_Root)),
-             m_Unique(std::move(other.m_Unique)),
-             m_NumKeys(std::move(other.m_NumKeys)),
-             m_Height(std::move(other.m_Height)),
-             m_Mutex()  // Mutex no es movable, inicializar uno nuevo
-       {
-              // Reiniciar el objeto fuente
-              other.m_Order = DEFAULT_BTREE_ORDER;
-              other.m_NumKeys = 0;
-              other.m_Height = 1;
-              other.m_Unique = true;
-       }
-       
-       // Operador de asignación por movimiento
-       BTree& operator=(BTree&& other) noexcept {
-              if (this != &other) {
-                     std::lock_guard<std::mutex> lock1(m_Mutex, std::adopt_lock);
-                     std::lock_guard<std::mutex> lock2(other.m_Mutex, std::adopt_lock);
-                     
-                     m_Order = std::move(other.m_Order);
-                     m_Root = std::move(other.m_Root);
-                     m_Unique = std::move(other.m_Unique);
-                     m_NumKeys = std::move(other.m_NumKeys);
-                     m_Height = std::move(other.m_Height);
-                     
-                     other.m_Order = DEFAULT_BTREE_ORDER;
-                     other.m_NumKeys = 0;
-                     other.m_Height = 1;
-                     other.m_Unique = true;
-              }
-              return *this;
-       }
+        iterator operator++(int)
+        {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
 
-       ~BTree() {}
-       //int           Open (char * name, int mode);
-       //int           Create (char * name, int mode);
-       //int           Close ();
+        bool operator==(const iterator& other) const
+        {
+            return m_current == other.m_current;
+        }
 
-      
+        bool operator!=(const iterator& other) const
+        {
+            return !(*this == other);
+        }
 
-       // ====================================================================
-       // OPERACIONES BÁSICAS
-       // ====================================================================
+    private:
+        void collectInOrder(Node* node)
+        {
+            if (!node) return;
 
-       // Implementación común para Insert
-       bool Insert(const keyType& key, const long ObjID) {
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              bt_ErrorCode error = m_Root.Insert(key, ObjID);
-              if( error == bt_duplicate )
-                     return false;
-              m_NumKeys++;
-              if( error == bt_overflow )
-              {
-                     m_Root.SplitRoot();
-                     m_Height++;
-              }
-              return true;
-       }
+            if (node->m_leaf)
+            {
+                for (auto& info : node->m_keys)
+                    m_items.push_back(&info);
+            }
+            else
+            {
+                for (std::size_t i = 0; i < node->m_keys.size(); ++i)
+                {
+                    collectInOrder(node->m_children[i]);
+                    m_items.push_back(&(node->m_keys[i]));
+                }
+                collectInOrder(node->m_children[node->m_keys.size()]);
+            }
+        }
 
-       // Implementación común para Remove
-       bool Remove(const keyType& key, const long ObjID) {
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              bt_ErrorCode error = m_Root.Remove(key, ObjID);
-              if( error == bt_duplicate || error == bt_nofound )
-                     return false;
-              m_NumKeys--;
-              if( error == bt_rootmerged )
-                     m_Height--;
-              return true;
-       }
-       
-       ObjIDType Search(const keyType& key) {
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              ObjIDType ObjID = -1;
-              m_Root.Search(key, ObjID);
-              return ObjID;
-       }
+        ObjectInfo* m_current;
+        std::size_t m_index;
+        std::vector<ObjectInfo*> m_items;
+    };
 
-       {      ObjIDType ObjID = -1;
-              m_Root.Search(key, ObjID);
-              return ObjID;
-       }
-       size_t            size()  { 
-                                   std::lock_guard<std::mutex> lock(m_Mutex);
-                                  return m_NumKeys; }
-       size_t            height() { 
-                                   std::lock_guard<std::mutex> lock(m_Mutex);
-                                   return m_Height;      }
-       size_t            GetOrder() { 
-                                   std::lock_guard<std::mutex> lock(m_Mutex);
-                                     return m_Order;     }
+    // ------------------------------------------------------
+    //  Reverse Iterator (backward)
+    // ------------------------------------------------------
+    class reverse_iterator
+    {
+    public:
+        using iterator_category = std::forward_iterator_tag;
+        using value_type        = ObjectInfo;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = ObjectInfo*;
+        using reference         = ObjectInfo&;
 
-       void            Print (ostream &os) {               
-                            m_Root.Print(os);
-                            std::lock_guard<std::mutex> lock(m_Mutex);}
-       
-       void            ForEach( lpfnForEach2 lpfn, void *pExtra1 )
-       {               
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              m_Root.ForEach(lpfn, 0, pExtra1);              
-       }
-       
-       void            ForEach( lpfnForEach3 lpfn, void *pExtra1, void *pExtra2)
-       {               
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              return m_Root.FirstThat([&pred](const keyType& key, const ObjIDType& id) {
-                     return pred(key, id);
-              });
-       }
-       
-       ObjectInfo*     FirstThat( lpfnFirstThat2 lpfn, void *pExtra1 )
-       {               
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              return m_Root.FirstThat(lpfn, 0, pExtra1);     
-       }
-       
-       ObjectInfo*     FirstThat( lpfnFirstThat3 lpfn, void *pExtra1, void *pExtra2)
-       {               
-              std::lock_guard<std::mutex> lock(m_Mutex);  // Protección de concurrencia
-              return m_Root.FirstThat(lpfn, 0, pExtra1, pExtra2);   
-       }
-       
-       //typedef               ObjectInfo iterator;
+        reverse_iterator() : m_current(nullptr), m_index(0) {}
+        
+        reverse_iterator(const BTree* tree) : m_current(nullptr), m_index(0)
+        {
+            if (tree && tree->m_root)
+            {
+                collectInOrder(tree->m_root);
+                if (!m_items.empty())
+                {
+                    m_index = m_items.size() - 1;
+                    m_current = m_items[m_index];
+                }
+            }
+        }
 
-       // ====================================================================
-       // MÉTODOS GENERALIZADOS FOREACH (Característica solicitada)
-       // ====================================================================
-       void ForEach(const ForEachFunction& func) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              m_Root.ForEach([&func](const keyType& key, const ObjIDType& id) {
-                     func(key, id);
-              });
-       }
-       
-       void ForEach(const ForEachFunctionExt& func, void* extraData) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              m_Root.ForEach([&func, extraData](const keyType& key, const ObjIDType& id) {
-                     func(key, id, extraData);
-              });
-       }
-       
-       // ====================================================================
-       // MÉTODOS GENERALIZADOS FIRSTTHAT (Característica solicitada)
-       // ====================================================================
-       ObjectInfo* FirstThat(const FirstThatPredicate& pred) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              return m_Root.FirstThat([&pred](const keyType& key, const ObjIDType& id) {
-                     return pred(key, id);
-              });
-       }
-       
-       ObjectInfo* FirstThat(const FirstThatPredicateExt& pred, void* extraData) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              return m_Root.FirstThat([&pred, extraData](const keyType& key, const ObjIDType& id) {
-                     return pred(key, id, extraData);
-              });
-       }
+        reference operator*() const { return *m_current; }
+        pointer operator->() const { return m_current; }
 
-       // ====================================================================
-       // MÉTODOS DE ITERADOR (Característica solicitada)
-       // ====================================================================
-       iterator begin() {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              return iterator(this, false);
-       }
-       
-       iterator end() {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              return iterator(this, true);
-       }
-       
-       const_iterator begin() const {
-              return const_iterator(const_cast<BTree*>(this), false);
-       }
-       
-       const_iterator end() const {
-              return const_iterator(const_cast<BTree*>(this), true);
-       }
-       
-       // ====================================================================
-       // MÉTODOS DE ITERADOR HACIA ATRÁS (Característica solicitada)
-       // ====================================================================
-       reverse_iterator rbegin() {
-              return reverse_iterator(end());
-       }
-       
-       reverse_iterator rend() {
-              return reverse_iterator(begin());
-       }
-       
-       const_reverse_iterator rbegin() const {
-              return const_reverse_iterator(end());
-       }
-       
-       const_reverse_iterator rend() const {
-              return const_reverse_iterator(begin());
-       }
-       // ====================================================================
-       // READ/WRITE OPERATIONS (Característica solicitada)
-       // ====================================================================
-       bool Write(const std::string& filename) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              std::ofstream ofs(filename, std::ios::binary);
-              if (!ofs) return false;
-              
-              ofs.write(reinterpret_cast<const char*>(&m_Order), sizeof(m_Order));
-              ofs.write(reinterpret_cast<const char*>(&m_Unique), sizeof(m_Unique));
-              ofs.write(reinterpret_cast<const char*>(&m_NumKeys), sizeof(m_NumKeys));
-              ofs.write(reinterpret_cast<const char*>(&m_Height), sizeof(m_Height));
-              
-              return m_Root.Write(ofs);
-       }
-       
-       bool Read(const std::string& filename) {
-              std::lock_guard<std::mutex> lock(m_Mutex);
-              std::ifstream ifs(filename, std::ios::binary);
-              if (!ifs) return false;
-              
-              ifs.read(reinterpret_cast<char*>(&m_Order), sizeof(m_Order));
-              ifs.read(reinterpret_cast<char*>(&m_Unique), sizeof(m_Unique));
-              ifs.read(reinterpret_cast<char*>(&m_NumKeys), sizeof(m_NumKeys));
-              ifs.read(reinterpret_cast<char*>(&m_Height), sizeof(m_Height));
-              
-              m_Root = BTNode(2 * m_Order + 1, m_Unique);
-              m_Root.SetMaxKeysForChilds(m_Order);
-              
-              return m_Root.Read(ifs);
-       }
+        reverse_iterator& operator++()
+        {
+            if (m_index > 0)
+            {
+                --m_index;
+                m_current = m_items[m_index];
+            }
+            else
+            {
+                m_current = nullptr;
+            }
+            return *this;
+        }
 
-protected:
-       BTNode          m_Root;
-       size_t          m_Height;  // height of tree
-       size_t          m_Order;   // order of tree
-       size_t          m_NumKeys; // number of keys
-       bool            m_Unique;  // Accept the elements only once ?
+        reverse_iterator operator++(int)
+        {
+            reverse_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
 
-       // ====================================================================
-       // CONCURRENCY SUPPORT (Característica solicitada)
-       // ====================================================================
-       mutable std::mutex m_Mutex;
+        bool operator==(const reverse_iterator& other) const
+        {
+            return m_current == other.m_current;
+        }
 
-};     
+        bool operator!=(const reverse_iterator& other) const
+        {
+            return !(*this == other);
+        }
 
-// ============================================================================
-// CLASE DE ITERADOR HACIA ADELANTE
-// ============================================================================
-template <typename Trait>
-class BTreeIterator {
+    private:
+        void collectInOrder(Node* node)
+        {
+            if (!node) return;
+
+            if (node->m_leaf)
+            {
+                for (auto& info : node->m_keys)
+                    m_items.push_back(&info);
+            }
+            else
+            {
+                for (std::size_t i = 0; i < node->m_keys.size(); ++i)
+                {
+                    collectInOrder(node->m_children[i]);
+                    m_items.push_back(&(node->m_keys[i]));
+                }
+                collectInOrder(node->m_children[node->m_keys.size()]);
+            }
+        }
+
+        ObjectInfo* m_current;
+        std::size_t m_index;
+        std::vector<ObjectInfo*> m_items;
+    };
+
+    // ------------------------------------------------------
+    //  Constructores / destructor
+    // ------------------------------------------------------
+    BTree(int order = 3, bool unique = true)
+        : m_t(order)
+        , m_root(new Node(order))
+        , m_unique(unique)
+        , m_numKeys(0)
+    {}
+
+    ~BTree()
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        delete m_root;
+    }
+
+    // No copiamos para simplificar
+    BTree(const BTree&)            = delete;
+    BTree& operator=(const BTree&) = delete;
+
+    // ------------------------------------------------------
+    //  Iterator methods
+    // ------------------------------------------------------
+    iterator begin() const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return iterator(this);
+    }
+
+    iterator end() const
+    {
+        return iterator();
+    }
+
+    reverse_iterator rbegin() const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return reverse_iterator(this);
+    }
+
+    reverse_iterator rend() const
+    {
+        return reverse_iterator();
+    }
+
+    // ------------------------------------------------------
+    //  Insert (thread-safe)
+    // ------------------------------------------------------
+    bool Insert(const keyType& k, ObjIDType v)
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        
+        // Si las claves deben ser unicas, verificamos antes
+        if (m_unique)
+        {
+            ObjIDType tmp{};
+            if (SearchInternal(k, tmp))
+                return false;     // ya existe
+        }
+
+        if (!m_root)
+            m_root = new Node(m_t);
+
+        // Si la raiz esta llena, creamos nueva raiz y partimos
+        if (m_root->isFull())
+        {
+            Node* s = new Node(m_t);
+            s->m_leaf = false;
+            s->m_children.push_back(m_root);
+            s->SplitChild(0);
+            m_root = s;
+        }
+
+        m_root->InsertNonFull(k, v);
+        ++m_numKeys;
+        return true;
+    }
+
+    // ------------------------------------------------------
+    //  Search (thread-safe)
+    // ------------------------------------------------------
+    bool Search(const keyType& k, ObjIDType& outVal) const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return SearchInternal(k, outVal);
+    }
+
+    // ------------------------------------------------------
+    //  ForEach general (thread-safe)
+    // ------------------------------------------------------
+    template<typename Fn>
+    void ForEach(Fn&& fn) const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        if (!m_root) return;
+        m_root->ForEach(0, std::forward<Fn>(fn));
+    }
+
+    // ------------------------------------------------------
+    //  FirstThat general (thread-safe)
+    // ------------------------------------------------------
+    template<typename Pred>
+    ObjectInfo* FirstThat(Pred&& pred)
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        if (!m_root) return nullptr;
+        return m_root->FirstThat(0, std::forward<Pred>(pred));
+    }
+
+    // ------------------------------------------------------
+    //  Print usando ForEach
+    // ------------------------------------------------------
+    void Print(std::ostream& os) const
+    {
+        ForEach([&](const ObjectInfo& info, std::size_t level)
+        {
+            for (std::size_t i = 0; i < level; ++i)
+                os << "\t";
+            os << info.key << "->" << info.ObjID << "\n";
+        });
+    }
+
+    // ------------------------------------------------------
+    //  size (thread-safe)
+    // ------------------------------------------------------
+    std::size_t size() const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        return m_numKeys;
+    }
+
+    // ------------------------------------------------------
+    //  Serializacion: Write / Read (thread-safe)
+    // ------------------------------------------------------
+    bool Write(const std::string& filename) const
+    {
+        std::shared_lock<std::shared_mutex> lock(m_mutex);
+        
+        std::ofstream ofs(filename, std::ios::binary);
+        if (!ofs) return false;
+
+        ofs.write(reinterpret_cast<const char*>(&m_t),       sizeof(m_t));
+        ofs.write(reinterpret_cast<const char*>(&m_unique),  sizeof(m_unique));
+        ofs.write(reinterpret_cast<const char*>(&m_numKeys), sizeof(m_numKeys));
+
+        ForEachInternal([&](const ObjectInfo& info, std::size_t)
+        {
+            ofs.write(reinterpret_cast<const char*>(&info.key),   sizeof(info.key));
+            ofs.write(reinterpret_cast<const char*>(&info.ObjID), sizeof(info.ObjID));
+        });
+
+        return true;
+    }
+
+    bool Read(const std::string& filename)
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mutex);
+        
+        std::ifstream ifs(filename, std::ios::binary);
+        if (!ifs) return false;
+
+        int         order  = 3;
+        bool        uniq   = true;
+        std::size_t count  = 0;
+
+        ifs.read(reinterpret_cast<char*>(&order), sizeof(order));
+        ifs.read(reinterpret_cast<char*>(&uniq),  sizeof(uniq));
+        ifs.read(reinterpret_cast<char*>(&count), sizeof(count));
+
+        delete m_root;
+        m_t       = order;
+        m_unique  = uniq;
+        m_numKeys = 0;
+        m_root    = new Node(m_t);
+
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            keyType   k{};
+            ObjIDType v{};
+            ifs.read(reinterpret_cast<char*>(&k), sizeof(k));
+            ifs.read(reinterpret_cast<char*>(&v), sizeof(v));
+            
+            // Llamamos InsertNonFull directamente (ya tenemos el lock)
+            if (!m_root) m_root = new Node(m_t);
+            if (m_root->isFull())
+            {
+                Node* s = new Node(m_t);
+                s->m_leaf = false;
+                s->m_children.push_back(m_root);
+                s->SplitChild(0);
+                m_root = s;
+            }
+            m_root->InsertNonFull(k, v);
+            ++m_numKeys;
+        }
+
+        return true;
+    }
+
+    // ------------------------------------------------------
+    //  operator<< (thread-safe)
+    // ------------------------------------------------------
+    friend std::ostream& operator<<(std::ostream& os, const BTree& tree)
+    {
+        tree.Print(os);
+        return os;
+    }
+
+    // ------------------------------------------------------
+    //  operator>> (thread-safe)
+    // ------------------------------------------------------
+    friend std::istream& operator>>(std::istream& is, BTree& tree)
+    {
+        std::unique_lock<std::shared_mutex> lock(tree.m_mutex);
+        
+        keyType k;
+        ObjIDType v;
+        
+        while (is >> k >> v)
+        {
+            // Insertamos sin lock (ya lo tenemos)
+            if (!tree.m_root)
+                tree.m_root = new Node(tree.m_t);
+
+            if (tree.m_root->isFull())
+            {
+                Node* s = new Node(tree.m_t);
+                s->m_leaf = false;
+                s->m_children.push_back(tree.m_root);
+                s->SplitChild(0);
+                tree.m_root = s;
+            }
+
+            tree.m_root->InsertNonFull(k, v);
+            ++tree.m_numKeys;
+        }
+        
+        return is;
+    }
+
 private:
-       using BTreeType = BTree<Trait>;
-       using BTNode = CBTreePage<Trait>;
-       using keyType = typename Trait::keyType;
-       using ObjIDType = typename Trait::ObjIDType;
-       
-       struct StackItem { BTNode* node; size_t index; 
-                        StackItem(BTNode* n, size_t i) : node(n), index(i) {} };
+    int         m_t;
+    Node*       m_root;
+    bool        m_unique;
+    std::size_t m_numKeys;
+    mutable std::shared_mutex m_mutex;  // Para concurrencia
 
-public:
-       using iterator_category = std::forward_iterator_tag;
-       using value_type = std::pair<keyType, ObjIDType>;
-       using difference_type = std::ptrdiff_t;
-       using pointer = value_type*;
-       using reference = value_type&;
-       
-       BTreeIterator(BTreeType* tree = nullptr, bool isEnd = false) : m_Tree(tree) {
-              if (tree && !isEnd) InicializarHaciaAdelante();
-       }
-       
-       BTreeIterator(const BTreeIterator& other) = default;
-       
-       BTreeIterator(BTreeIterator&& other) noexcept
-           : m_Tree(other.m_Tree), m_Stack(std::move(other.m_Stack)),
-             m_CurrentKey(std::move(other.m_CurrentKey)),
-             m_CurrentValue(std::move(other.m_CurrentValue)) {
-              other.m_Tree = nullptr;
-       }
-       
-       void InicializarHaciaAdelante() {
-              m_Stack.clear();
-              if (m_Tree && m_Tree->m_NumKeys > 0) {
-                     BTNode* current = &(m_Tree->m_Root);
-                     while (current && current->GetKeyCount() > 0) {
-                            m_Stack.emplace_back(current, 0);
-                            current = current->GetChild(0);
-                     }
-                     AvanzarHaciaAdelante();
-              }
-       }
-       
-       void AvanzarHaciaAdelante() {
-              if (m_Stack.empty()) {
-                     m_CurrentKey = keyType(); m_CurrentValue = ObjIDType(); return;
-              }
-              auto& top = m_Stack.back();
-              m_CurrentKey = top.node->GetKey(top.index);
-              m_CurrentValue = top.node->GetValue(top.index);
-              top.index++;
-              if (top.index > top.node->GetKeyCount()) {
-                     m_Stack.pop_back();
-                     if (!m_Stack.empty()) {
-                            auto& parent = m_Stack.back();
-                            size_t childIdx = parent.index - 1;
-                            if (childIdx < parent.node->GetChildCount()) {
-                                   BTNode* rightChild = parent.node->GetChild(childIdx + 1);
-                                   BTNode* current = rightChild;
-                                   while (current && current->GetKeyCount() > 0) {
-                                          m_Stack.emplace_back(current, 0);
-                                          current = current->GetChild(0);
-                                   }
-                            }
-                     }
-              }
-       }
-       
-       value_type operator*() const { return {m_CurrentKey, m_CurrentValue}; }
-       BTreeIterator& operator++() { AvanzarHaciaAdelante(); return *this; }
-       BTreeIterator operator++(int) { BTreeIterator temp = *this; ++(*this); return temp; }
-       bool operator==(const BTreeIterator& other) const {
-              return m_Tree == other.m_Tree && m_Stack.size() == other.m_Stack.size() &&
-                     (m_Stack.empty() || m_Stack.back().node == other.m_Stack.back().node);
-       }
-       bool operator!=(const BTreeIterator& other) const { return !(*this == other); }
+    // Métodos internos sin locks (para uso interno cuando ya tenemos el lock)
+    bool SearchInternal(const keyType& k, ObjIDType& outVal) const
+    {
+        if (!m_root) return false;
+        return m_root->Search(k, outVal);
+    }
 
-private:
-       BTreeType* m_Tree;
-       std::vector<StackItem> m_Stack;
-       keyType m_CurrentKey;
-       ObjIDType m_CurrentValue;
+    template<typename Fn>
+    void ForEachInternal(Fn&& fn) const
+    {
+        if (!m_root) return;
+        m_root->ForEach(0, std::forward<Fn>(fn));
+    }
 };
 
-// TODO Add operator<<
-template <typename Trait>
-std::ostream& operator<<(std::ostream& os, const BTree<Trait>& tree) {
-       BTree<Trait>& nonConstTree = const_cast<BTree<Trait>&>(tree);
-       std::lock_guard<std::mutex> lock(nonConstTree.m_Mutex);
-       
-       os << "BTree Statistics:" << std::endl;
-       os << "  Order: " << tree.m_Order << std::endl;
-       os << "  Height: " << tree.m_Height << std::endl;
-       os << "  Number of keys: " << tree.m_NumKeys << std::endl;
-       os << "  Unique keys only: " << (tree.m_Unique ? "Yes" : "No") << std::endl;
-       os << "  Tree structure:" << std::endl;
-       
-       tree.m_Root.Print(os);
-       return os;
-}
-
-// TODO Add operator>>
-
- // Avanzar iterador en dirección hacia adelante
- template <typename Trait>
-std::istream& operator>>(std::istream& is, BTree<Trait>& tree) {
-       std::lock_guard<std::mutex> lock(tree.m_Mutex);
-       
-       tree = BTree<Trait>();
-       
-       is >> tree.m_Order;
-       is >> tree.m_Unique;
-       is >> tree.m_NumKeys;
-       is >> tree.m_Height;
-       
-       tree.m_Root = CBTreePage<Trait>(2 * tree.m_Order + 1, tree.m_Unique);
-       tree.m_Root.SetMaxKeysForChilds(tree.m_Order);
-       
-       tree.m_Root.Read(is);
-       
-       return is;
-
-#endif
-
+#endif // __BTREE_H__
